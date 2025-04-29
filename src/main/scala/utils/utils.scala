@@ -63,6 +63,22 @@ package object utils {
     data.map(_.map(elt => "b" + floatToSAF(elt)))
   }
 
+  // Read matrix file in SAF format
+  def readCSVFloat(
+    filePath : String
+  ) : Array[Array[String]] = {
+    val source = scala.io.Source.fromFile(filePath)
+    val data = source
+      .getLines()
+      .map { line =>
+        line.split(" ").map(_.trim.toFloat)
+      }.toArray
+    source.close()
+    data.map(_.map(elt => "b" + String.format(
+      "%32s", java.lang.Float.floatToIntBits(elt).toBinaryString
+    ).replace(' ', '0')))
+  }
+
   case class Parameters(
     // Matrix width (number of workers)
     M_WIDTH     : Int,
@@ -79,11 +95,16 @@ package object utils {
     // SAF total width
     val SAF_WIDTH = 8 - SAF_L + SAF_W
     val memData   = readCSVSAF(WEIGHT_FILE, SAF_L, SAF_W, SAF_B, SAF_L2N)
+    val floatData = readCSVFloat(WEIGHT_FILE)
     def floatToSAF(f : Float) : String = {
       matmul.utils.floatToSAF(f, SAF_L, SAF_W, SAF_B, SAF_L2N)
     }
     // AXI buses
-    val AXI_W = 64
+    // AXI-Lite
+    val CTL_AW = 32
+    val CTL_W  = 32
+    // AXI
+    val AXI_W  = 64
     val AXI_AW = 64
     // Leave some room
     val FIFO_DEPTH = 4 * M_WIDTH

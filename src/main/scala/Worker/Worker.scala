@@ -54,14 +54,14 @@ class Worker(
   safAdder.i_safB := safMul.o_res
 
   // Store back in accumulator (when working)
-  when(in.work & ~writeReg) {
+  when(in.work & ~writeReg & ~in.prog) {
     accReg := safAdder.o_res
   }
 
   /* FSM LOGIC */
   // When receiving write, pass through the data from previous workers in the
   // pipeline, and append accumulator data
-  when(in.work & ~writeReg) {
+  when(in.work & ~writeReg & ~in.prog) {
     inCntReg := inCntReg + 1.U
   }
 
@@ -69,40 +69,42 @@ class Worker(
   val outReg = RegInit(0.U(PARAM.SAF_WIDTH.W))
   val wkReg  = RegInit(false.B)
   val prReg  = RegInit(false.B)
+  // val prReg  = RegInit(false.B)
   out.work  := wkReg
   out.data  := outReg
-  out.prog  := prReg
-  when(in.prog) {
-    when(fwdProgReg) {
-      outReg := in.data
-      prReg  := true.B
-      wkReg  := false.B
-    } .otherwise {
-      workerMem(progCntReg) := in.data
-      prReg  := false.B
-      wkReg  := false.B
+  out.prog  := RegNext(in.prog)
+  when(in.work) {
+    when(in.prog & ~fwdProgReg) {
       progCntReg := progCntReg + 1.U
       when(progCntReg === (PARAM.M_WIDTH - 1).U) {
         fwdProgReg := true.B
       }
-    }
-  } .elsewhen(in.work) {
-    prReg := false.B
-    // Just passthrough
-    if(WID == PARAM.M_HEIGHT - 1) {
-      when(writeReg) {
-        outReg := in.data
-        wkReg  := in.work
-      } .otherwise {
+      wkReg  := false.B
+      outReg := 0.U
+      // prReg  := false.B
+    } .elsewhen(in.prog & fwdProgReg) {
+      if(WID == PARAM.M_HEIGHT - 1) {
         outReg := 0.U
         wkReg  := false.B
+        // prReg  := false.B
+      } else {
+        outReg := in.data
+        wkReg  := in.work
+        // prReg  := in.prog
       }
-    } else {
-      outReg := in.data
-      wkReg  := in.work
+    } .otherwise {
+      if(WID == PARAM.M_HEIGHT - 1) {
+        outReg   := 0.U
+        wkReg    := false.B
+        // prReg    := false.B
+      } else {
+        outReg   := in.data
+        wkReg    := in.work
+        // prReg    := false.B
+      }
+      inCntReg := inCntReg + 1.U
     }
-  } .elsewhen(~in.work & RegNext(in.work) & writeReg) {
-    prReg    := false.B
+  } .elsewhen(~in.work & RegNext(in.work) & inCntReg === (PARAM.M_HEIGHT - 1).U) {
     // When getting a falling edge on work while in write mode, send own data
     outReg   := accReg
     wkReg    := true.B
@@ -114,6 +116,11 @@ class Worker(
     inCntReg := 0.U
   } .otherwise {
     wkReg  := false.B
-    prReg  := false.B
+    // prReg  := false.B
+  }
+
+  when(~in.prog & fwdProgReg) {
+    fwdProgReg := false.B
+    // prReg      := false.B
   }
 }

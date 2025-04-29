@@ -15,10 +15,14 @@ class MatMulWrapper(
   PARAM : Parameters
 ) extends Module {
   /* I/O */
+  // Slave AXI-Lite interface (read-only)
+  val s_axil = IO(new SlaveAXILiteInterface(PARAM.CTL_AW, PARAM.CTL_W))
   // Slave AXI interface
-  val s_axi = IO(new SlaveAXIInterface(PARAM.AXI_AW, PARAM.AXI_W))
+  val s_axi  = IO(new SlaveAXIInterface(PARAM.AXI_AW, PARAM.AXI_W))
 
   /* MODULES */
+  // AXI-Lite read-only slave
+  val roAxiL = Module(new AXILiteSlave(PARAM.CTL_AW, PARAM.CTL_W, 0, 0))
   // Float32 to SAF
   val f2SAF  = Module(new Float32ToSAF(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
   // AXI breakdown
@@ -31,7 +35,23 @@ class MatMulWrapper(
   val fifo   = Module(new FIFO(UInt(32.W), PARAM.FIFO_DEPTH))
   val axiOut = Module(new AXIReadAdapter(PARAM.AXI_AW, PARAM.AXI_W))
 
+  /* CONTROL REGISTER */
+  // Only bit 0 is used
+  val ctlReg = RegInit(0.U(PARAM.CTL_W.W))
+  // ctlReg(0) is the prog flag, indicates to matmul that the incoming data is
+  // for programming nodes
+  matmul.i_prog := ctlReg(0)
+  // When getting prog ack from the kernel, disable prog
+  // flag
+  when(roAxiL.o_we) {
+    ctlReg := roAxiL.o_data
+  } .elsewhen(matmul.o_prog_ok) {
+    ctlReg := 0.U
+  }
+
   /* WIRING */
+  // Wire AXI-Lite slave
+  roAxiL.s_axil   <> s_axil
   // Breakdown AXI interface into read / write
   axiBk.s_axi     <> s_axi
   // AXI bus directly writes in the MatMul kernel

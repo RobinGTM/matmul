@@ -12,7 +12,7 @@ import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 import matmul.utils.Parameters
 
-class MatMulTopSpec extends AnyFlatSpec with Matchers {
+class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
   val param = Parameters(
     16,
     16,
@@ -95,10 +95,10 @@ class MatMulTopSpec extends AnyFlatSpec with Matchers {
             uut.clock.step(pauseDuration)
           }
           uut.s_axi.rready.poke(true)
-          while(!uut.s_axi.rvalid.peek().litToBoolean) {
-            println(s"Read addr ${addr} data number ${i} stalled by rvalid low.")
-            uut.clock.step()
-          }
+          // while(!uut.s_axi.rvalid.peek().litToBoolean) {
+          //   println(s"Read addr ${addr} data number ${i} stalled by rvalid low.")
+          //   uut.clock.step()
+          // }
           uut.clock.step()
           println(s"Read ${uut.s_axi.rdata.peek().litValue} on transfer ${i}")
           uut.s_axi.arvalid.poke(false)
@@ -118,6 +118,25 @@ class MatMulTopSpec extends AnyFlatSpec with Matchers {
       read_axi(111, 16)
 
       uut.clock.step(255)
+
+
+      // Write PROG to control reg
+      uut.s_axil.awvalid.poke(true)
+      uut.clock.step()
+      uut.s_axil.wvalid.poke(true)
+      uut.s_axil.wdata.poke(1)
+      uut.clock.step(2)
+      uut.s_axil.wdata.poke(0)
+      uut.s_axil.wvalid.poke(false)
+      uut.clock.step()
+
+
+      write_axi(321, List.tabulate(param.M_HEIGHT * param.M_WIDTH)(
+        i => param.floatData(i / param.M_HEIGHT)(i % param.M_WIDTH).U
+      ))
+
+
+      uut.clock.step(20)
 
       write_axi(123, List.tabulate(param.M_HEIGHT)(
         i => ("b" + java.lang.Float.floatToIntBits((2 * i + 1).toFloat).toBinaryString).U
