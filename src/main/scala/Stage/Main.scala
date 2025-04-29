@@ -6,10 +6,11 @@ import matmul.utils.Parameters
 import matmul.Top
 
 object Main extends App {
+  val size = 400
   val param = Parameters(
-    M_WIDTH     = 16,
-    M_HEIGHT    = 16,
-    WEIGHT_FILE = "src/main/resources/dummy16-matrix.txt"
+    M_WIDTH     = size,
+    M_HEIGHT    = size,
+    WEIGHT_FILE = s"src/main/resources/random${size}-matrix.txt"
   )
 
   val outDir = s"outputs/MatMul-${param.M_WIDTH}x${param.M_HEIGHT}"
