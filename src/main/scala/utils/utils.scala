@@ -57,7 +57,7 @@ package object utils {
     val data = source
       .getLines()
       .map { line =>
-        line.split(" ").map(_.trim.toInt.toFloat)
+        line.split(" ").map(_.trim.toFloat)
       }.toArray
     source.close()
     data.map(_.map(elt => "b" + floatToSAF(elt)))
