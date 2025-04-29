@@ -1,0 +1,9 @@
+*~
+#*
+*#
+outputs/*
+project/*
+target/*
+test_run_dir/*
+vivado/*
+xdma_0_ex.gen/*
