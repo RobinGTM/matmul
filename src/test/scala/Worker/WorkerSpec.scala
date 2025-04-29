@@ -18,15 +18,25 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
     16,
     "src/test/resources/dummy16-matrix.txt"
   )
+  val wid = 0
 
   "Worker" should "work_lol" in {
     simulate(new Worker(
       PARAM = param,
-      WID   = 0
+      WID   = wid
     )) { uut =>
       uut.reset.poke(true)
       uut.clock.step(3)
       uut.reset.poke(false)
+
+      for(i <- 0 to 15) {
+        uut.in.prog.poke(true)
+        uut.in.data.poke(param.memData(wid)(i).U)
+        uut.clock.step()
+      }
+      uut.in.prog.poke(false)
+
+      uut.clock.step(255)
 
       for(i <- 1 to 16) {
         uut.in.data.poke(("b" + param.floatToSAF(i.toFloat)).U)

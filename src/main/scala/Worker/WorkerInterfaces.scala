@@ -10,6 +10,7 @@ package object interfaces {
     PARAM : Parameters
   ) extends Bundle {
     val data  = UInt(PARAM.SAF_WIDTH.W)
+    val prog  = Bool()
     val work  = Bool()
   }
 }
