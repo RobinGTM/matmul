@@ -1,0 +1,54 @@
+package matmul.saf
+
+import chisel3._
+import chisel3.util._
+
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.must.Matchers
+
+// https://github.com/edwardcwang/decoupled-serializer.git
+// to generate VCD traces with chisel 6.6.0
+import chisel3.simulator.VCDHackedEphemeralSimulator._
+
+class SAFAddSpec extends AnyFlatSpec with Matchers {
+  "SAFAdd" should "work" in {
+    simulate(new SAFAdder) { uut =>
+      // -1 + 1
+      uut.i_safA.poke("b0111111111111111111000000000000000000000000000000000000000000000000000000".U)
+      uut.i_safB.poke("b0110000000000000001000000000000000000000000000000000000000000000000000000".U)
+      println(uut.o_res.peek())
+
+      // 15.999999 + 10
+      uut.i_safA.poke("b1000000000000000000000000000000000000000000000011111111111111111111111100".U)
+      uut.i_safB.poke("b1000000000000000000000000000000000000000000000010100000000000000000000000".U)
+      println(uut.o_res.peek())
+
+      // -10.78125 + 10
+      uut.i_safA.poke("b1001111111111111111111111111111111111111111111101010011100000000000000000".U)
+      uut.i_safB.poke("b1000000000000000000000000000000000000000000000010100000000000000000000000".U)
+      println(uut.o_res.peek())
+    }
+  }
+}
+
+class SAFMulSpec extends AnyFlatSpec with Matchers {
+  "SAFMul" should "work" in {
+    simulate(new SAFMul) { uut =>
+      // -1 * 1
+      uut.i_safA.poke("b0111111111111111111000000000000000000000000000000000000000000000000000000".U)
+      uut.i_safB.poke("b0110000000000000001000000000000000000000000000000000000000000000000000000".U)
+      println(uut.o_res.peek())
+
+      // 15.999999 * 10
+      uut.i_safA.poke("b1000000000000000000000000000000000000000000000011111111111111111111111100".U)
+      uut.i_safB.poke("b1000000000000000000000000000000000000000000000010100000000000000000000000".U)
+      println(uut.o_res.peek())
+
+      // -10.78125 * 10
+      uut.i_safA.poke("b1001111111111111111111111111111111111111111111101010011100000000000000000".U)
+      uut.i_safB.poke("b1000000000000000000000000000000000000000000000010100000000000000000000000".U)
+      println(uut.o_res.peek())
+      
+    }
+  }
+}
