@@ -12,7 +12,7 @@ import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 import matmul.utils.Parameters
 
-class MatMulTopSpec extends AnyFlatSpec with Matchers {
+class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
   val param = Parameters(
     16,
     16,
