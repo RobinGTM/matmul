@@ -6,7 +6,7 @@ import matmul.utils.Parameters
 import matmul.Top
 
 object Main extends App {
-  val size = 400
+  val size = 300
   val param = Parameters(
     M_WIDTH     = size,
     M_HEIGHT    = size,

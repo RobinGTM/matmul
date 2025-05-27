@@ -73,9 +73,24 @@
 ##
 #############################################################################################################
 create_clock -period 10.000 -name sys_clk [get_ports sys_clk_p]
+create_clock -period 6.4000 -name coreclk_ref [get_pins coreClkIBufDS/O]
+# SIM clock
+create_generated_clock -name coreclk -source [get_pins coreClkPll/CLKIN] \
+    [get_pins coreClkPll/CLKOUT0]
+#create_generated_clock -name sim_clk  \
+#    -source [get_pins simClkIBufDS/O] \
+#    [get_pins simClkBufG/O]
+# Declare asynchronous clock groups
+set_clock_groups -asynchronous \
+    -group [get_clocks coreclk_ref] \
+    -group [get_clocks _xdma_axi_aclk]
+#set_clock_groups -asynchronous  \
+#    -group [get_clocks sim_clk] \
+#    -group [get_clocks _xdma_axi_aclk]
 #
 #############################################################################################################
 set_false_path -from [get_ports sys_rst_n]
+set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets sysRstIBuf/O]
 set_property PULLTYPE PULLUP [get_ports sys_rst_n]
 set_property IOSTANDARD POD12 [get_ports sys_rst_n]
 #
@@ -86,5 +101,8 @@ set_property CONFIG_VOLTAGE 1.8 [current_design]
 #############################################################################################################
 set_property PACKAGE_PIN AM10 [get_ports sys_clk_n]
 set_property PACKAGE_PIN AM11 [get_ports sys_clk_p]
+set_property -dict { IOSTANDARD LVDS PACKAGE_PIN AV19 } [get_ports coreclk_n]
+set_property -dict { IOSTANDARD LVDS PACKAGE_PIN AU19 } [get_ports coreclk_p]
 #
 #############################################################################################################
+

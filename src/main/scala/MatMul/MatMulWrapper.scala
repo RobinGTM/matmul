@@ -4,49 +4,76 @@ package matmul
 import chisel3._
 import chisel3.util._
 
+import adapters._
+import asyncfifo._
+import asyncfifo.interfaces._
+import mcp._
+import mcp.interfaces._
 import matmul._
 import matmul.saf._
 import matmul.axi._
 import matmul.axi.interfaces._
-import matmul.fifo._
 import matmul.utils.Parameters
 
 class MatMulWrapper(
   PARAM : Parameters
-) extends Module {
+) extends RawModule {
   /* I/O */
-  // Slave AXI interface
-  val s_axi = IO(new SlaveAXIInterface(PARAM.AXI_AW, PARAM.AXI_W))
+  // Clk / rst
+  val i_coreclk = IO(Input(Clock()))
+  // Async reset (synchronized in the core)
+  val i_arstn   = IO(Input(Bool()))
 
-  /* MODULES */
-  // Float32 to SAF
-  val f2SAF  = Module(new Float32ToSAF(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
-  // AXI breakdown
-  val axiBk  = Module(new SAXIRW2Full(PARAM.AXI_AW, PARAM.AXI_W))
-  val axiIn  = Module(new AXIWriteAdapter(PARAM.AXI_AW, PARAM.AXI_W))
-  val matmul = Module(new MatMul(PARAM))
-  // SAF to float32
-  val SAF2F  = Module(new SAFToFloat32(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
-  // Floats32 are used so hardcode 32-bit vectors
-  val fifo   = Module(new FIFO(UInt(32.W), PARAM.FIFO_DEPTH))
-  val axiOut = Module(new AXIReadAdapter(PARAM.AXI_AW, PARAM.AXI_W))
+  // Clock-domain crossing interfaces (FIFO pointers)
+  val ififo_xwcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((PARAM.FIFO_CNT_W + 1).W))))
+  val ififo_xrcnt = IO(new MCPCrossSrc2DstInterface(UInt((PARAM.FIFO_CNT_W + 1).W)))
+  val ofifo_xwcnt = IO(new MCPCrossSrc2DstInterface(UInt((PARAM.FIFO_CNT_W + 1).W)))
+  val ofifo_xrcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((PARAM.FIFO_CNT_W + 1).W))))
+  // FIFO memory interfaces
+  // FIFO memories contains float32
+  val ififo_rmem  = IO(new BasicMemReadInterface(PARAM.FIFO_CNT_W, UInt(32.W)))
+  val ofifo_wmem  = IO(new BasicMemWriteInterface(PARAM.FIFO_CNT_W, UInt(32.W)))
 
-  /* WIRING */
-  // Breakdown AXI interface into read / write
-  axiBk.s_axi     <> s_axi
-  // AXI bus directly writes in the MatMul kernel
-  axiIn.s_axi_wr  <> axiBk.s_axi_wr
-  f2SAF.i_f32     := axiIn.out.data(31, 0)
-  matmul.in.data  := f2SAF.o_saf
-  matmul.in.valid := axiIn.out.valid
-  // Convert back to float32
-  SAF2F.i_saf     := matmul.out.data
-  // MatMul ignores FIFO's nfull, so FIFO must be read before asking too many
-  // computations
-  fifo.wr.i_we    := matmul.out.valid
-  fifo.wr.i_data  := SAF2F.o_f32
-  // AXI reads from FIFO
-  fifo.rd         <> axiOut.fifo_rd
-  // AXI output adapter handles read requests
-  axiBk.s_axi_rd  <> axiOut.s_axi_rd
+  /* RESET SYNCHRONIZER */
+  val sync_rstn = withClock(i_coreclk) { RegNext(RegNext(i_arstn)) }
+
+  withClockAndReset(i_coreclk, ~sync_rstn) {
+    /* MODULES */
+    // Input FIFO read port
+    val iFifoRdPort = Module(new AsyncFIFOReadPort(PARAM.FIFO_CNT_W, UInt(32.W)))
+    // Float32 to SAF converter
+    val f2SAF       = Module(
+      new Float32ToSAF(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N)
+    )
+    val matmul      = Module(new MatMul(PARAM))
+    // SAF to Float32 converter
+    val SAF2F       = Module(
+      new SAFToFloat32(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N)
+    )
+    // Output FIFO write port
+    val oFifoWrPort = Module(new AsyncFIFOWritePort(PARAM.FIFO_CNT_W, UInt(32.W)))
+
+    /* WIRING */
+    // Memory interface
+    iFifoRdPort.mem            <> ififo_rmem
+    // Clock domain-crossing interfaces
+    iFifoRdPort.wcnt_cross     <> ififo_xwcnt
+    iFifoRdPort.rcnt_cross     <> ififo_xrcnt
+    // Always reading as soon as data is available
+    iFifoRdPort.fifo_rd.i_en   := true.B
+    // Convert input from FIFO to SAF
+    f2SAF.i_f32                := iFifoRdPort.fifo_rd.o_data
+    // Feed matmul kernel
+    matmul.in.data             := f2SAF.o_saf
+    matmul.in.valid            := iFifoRdPort.fifo_rd.o_nempty
+    // Convert output back to float32
+    SAF2F.i_saf                := matmul.out.data
+    // Write to output FIFO as soon as data is valid (no "ready" mechanism)
+    oFifoWrPort.fifo_wr.i_we   := matmul.out.valid
+    oFifoWrPort.fifo_wr.i_data := SAF2F.o_f32
+    // Output clock domain-crossing interfaces
+    oFifoWrPort.wcnt_cross     <> ofifo_xwcnt
+    oFifoWrPort.rcnt_cross     <> ofifo_xrcnt
+    oFifoWrPort.mem            <> ofifo_wmem
+  }
 }

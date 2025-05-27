@@ -1,5 +1,7 @@
 package matmul
 
+import chisel3.util._
+
 import java.lang.Float.floatToIntBits
 
 package object utils {
@@ -63,22 +65,39 @@ package object utils {
     data.map(_.map(elt => "b" + floatToSAF(elt)))
   }
 
+  def readCSVFloat(
+    filePath : String
+  ) : Array[Array[String]] = {
+    val source = scala.io.Source.fromFile(filePath)
+    val data = source
+      .getLines()
+      .map { line =>
+        line.split(" ").map(_.trim.toFloat)
+      }.toArray
+    source.close()
+    data.map(_.map(elt => "b" + String.format(
+      "%32s", java.lang.Float.floatToIntBits(elt).toBinaryString
+    ).replace(' ', '0')))
+  }
+
   case class Parameters(
     // Matrix width (number of workers)
-    M_WIDTH     : Int,
+    M_WIDTH       : Int,
     // Matrix height (number of memory values per worker)
-    M_HEIGHT    : Int,
+    M_HEIGHT      : Int,
     // Weights values filename
-    WEIGHT_FILE : String,
+    WEIGHT_FILE   : String,
     // SAF parameters
-    SAF_L       : Int = 5,
-    SAF_W       : Int = 70,
-    SAF_B       : Int = 150,
-    SAF_L2N     : Int = 16
+    SAF_L         : Int = 5,
+    SAF_W         : Int = 70,
+    SAF_B         : Int = 150,
+    SAF_L2N       : Int = 16,
+    USE_HARDFLOAT : Boolean = false
   ) {
     // SAF total width
     val SAF_WIDTH = 8 - SAF_L + SAF_W
     val memData   = readCSVSAF(WEIGHT_FILE, SAF_L, SAF_W, SAF_B, SAF_L2N)
+    // val memData   = readCSVFloat(WEIGHT_FILE)
     def floatToSAF(f : Float) : String = {
       matmul.utils.floatToSAF(f, SAF_L, SAF_W, SAF_B, SAF_L2N)
     }
@@ -86,6 +105,7 @@ package object utils {
     val AXI_W = 64
     val AXI_AW = 64
     // Leave some room
-    val FIFO_DEPTH = 4 * M_WIDTH
+    val FIFO_DEPTH = 4 * M_HEIGHT
+    val FIFO_CNT_W = log2Up(FIFO_DEPTH)
   }
 }

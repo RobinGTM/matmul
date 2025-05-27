@@ -12,4 +12,11 @@ package object interfaces {
     val data  = UInt(PARAM.SAF_WIDTH.W)
     val work  = Bool()
   }
+
+  class WorkerHardFloatInterface(
+    PARAM : Parameters
+  ) extends Bundle {
+    val data = UInt((24 + 8 + 1).W)
+    val work = Bool()
+  }
 }

@@ -14,9 +14,9 @@ import matmul.utils.Parameters
 
 class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
   val param = Parameters(
-    16,
-    16,
-    "src/test/resources/dummy16-matrix.txt"
+    300,
+    300,
+    "src/main/resources/random300-matrix.txt"
   )
 
   "MatMulTop" should "work" in {

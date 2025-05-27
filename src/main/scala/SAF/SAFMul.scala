@@ -21,7 +21,7 @@ class SAFMul(
   /* I/O */
   val i_safA = IO(Input(UInt(SAF_W.W)))
   val i_safB = IO(Input(UInt(SAF_W.W)))
-  val o_res  = IO(Output(UInt((2 * W + L).W)))
+  val o_res  = IO(Output(UInt(SAF_W.W)))
 
   /* MUL */
   // Decompose inputs
@@ -47,16 +47,17 @@ class SAFMul(
     1.U + ~ maB,
     maB
   )
-  val prodUMa = Wire(UInt((2 * W + L).W))
+  private val PROD_UMA_W = 2 * W + L
+  val prodUMa = Wire(UInt(PROD_UMA_W.W))
   // Shift product to compensate for exponent reduction
   prodUMa := (m1 * m2) << resSh
 
   // Bring MSB back in right position: between W - 1 and 0
-  val msbPos = (2 * W + L - 1).U - PriorityEncoder(Reverse(prodUMa))
+  val msbPos = (PROD_UMA_W - 1).U - PriorityEncoder(Reverse(prodUMa))
 
   val prEx = Wire(UInt((EW - L).W))
-  val prUMa = Wire(UInt((2 * W + L).W))
-  val shamt = Wire(UInt(log2Up(2 * W + L).W))
+  val prUMa = Wire(UInt(PROD_UMA_W.W))
+  val shamt = Wire(UInt(log2Up(PROD_UMA_W).W))
   when(msbPos > (W - 1).U) {
     shamt := 1.U + ((msbPos - (W - 1).U) >> L)
     prUMa := (prodUMa >> (shamt << L)).asUInt(W - 1, 0)

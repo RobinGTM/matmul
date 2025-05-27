@@ -68,6 +68,14 @@ class Float32ToSAFSpec extends AnyFlatSpec with Matchers {
       // -3.4028235e38
       uut.i_f32.poke("b11111111011111111111111111111111".U)
       println(s"${uut.o_saf.peek()}")
+
+      // 228004.2343233
+      uut.i_f32.poke("b01001000010111101010100100001111".U)
+      println(s"${uut.o_saf.peek()}")
+
+      // 3213212.34123
+      uut.i_f32.poke("b01001010010001000001111001110001".U)
+      println(s"${uut.o_saf.peek()}")
     }
   }
 }
