@@ -1,0 +1,86 @@
+package matmul.worker
+
+import chisel3._
+import chisel3.util._
+
+import matmul.saf._
+import matmul.utils.Parameters
+
+import matmul.worker.interfaces._
+
+// The Worker accumulates the matrix multiplication for one coefficient of the
+// output
+class PipelinedWorker(
+  PARAM : Parameters,
+  WID   : Int
+) extends Module {
+  /* I/O */
+  // Worker input
+  val in  = IO(Input(new WorkerInterface(PARAM)))
+  // Worker output
+  val out = IO(Output(new WorkerInterface(PARAM)))
+
+  /* INTERNAL REGISTERS */
+  // Memory (ROM)
+  val workerMem        = VecInit(PARAM.memData(WID).toIndexedSeq.map(_.U(PARAM.SAF_WIDTH.W)))
+  // Accumulator
+  val accReg           = RegInit(0.U(PARAM.SAF_WIDTH.W))
+  // Input counter: counts the coefficients of the input vector
+  val inCntReg         = RegInit(0.U(log2Up(PARAM.M_HEIGHT).W))
+  val inPipelineCntReg = RegNext(inCntReg)
+  /* WRITE CONTROL SIGNAL */
+  val doWriteReg       = RegInit(false.B)
+  when(RegNext(inCntReg) === (PARAM.M_HEIGHT - 1).U) {
+    doWriteReg := true.B
+  }
+
+  /* MODULES */
+  // SAF adder
+  val safAdder = Module(new SAFAdder(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
+  // SAF multiplier
+  val safMul   = Module(new SAFMul(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
+
+  /* DSP PIPELINE */
+  val dspPipelineReg = RegNext(safMul.o_res)
+  val wkPipelineReg  = RegNext(in.work)
+
+  /* MATRIX MULTIPLICATION WIRING */
+  // Multiply matrix coeff in memory with input vector
+  safMul.i_safA   := workerMem(inCntReg)
+  safMul.i_safB   := in.data
+
+  // Add to accumulator
+  safAdder.i_safA := accReg
+  safAdder.i_safB := dspPipelineReg
+
+  // Store back in accumulator (when working)
+  when(wkPipelineReg & ~doWriteReg) {
+    accReg := safAdder.o_res
+  }
+
+  /* FSM LOGIC */
+  // When receiving write, pass through the data from previous workers in the
+  // pipeline, and append accumulator data
+  when(in.work & ~doWriteReg) {
+    inCntReg := inCntReg + 1.U
+  }
+
+  /* OUTPUT REGISTERS */
+  // When getting a falling edge on work while in write mode, send own data
+  when(doWriteReg) {
+    out.data   := accReg
+    out.work   := true.B
+    accReg     := 0.U
+    inCntReg   := 0.U
+    doWriteReg := false.B
+  } .otherwise {
+    // Otherwise, forward if not last worker
+    if (WID == PARAM.M_HEIGHT - 1) {
+      out.data := 0.U
+      out.work := false.B
+    } else {
+      out.data := RegNext(in.data)
+      out.work := wkPipelineReg
+    }
+  }
+}
