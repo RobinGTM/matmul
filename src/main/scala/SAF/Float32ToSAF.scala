@@ -1,4 +1,4 @@
-package matmul.saf
+package saf
 
 // Chisel
 import chisel3._

@@ -10,9 +10,9 @@ import asyncfifo.interfaces._
 import mcp._
 import mcp.interfaces._
 import matmul._
-import matmul.saf._
-import matmul.axi._
-import matmul.axi.interfaces._
+import saf._
+import axi._
+import axi.interfaces._
 import matmul.utils.Parameters
 
 class MatMulWrapper(
@@ -65,7 +65,9 @@ class MatMulWrapper(
     f2SAF.i_f32                := iFifoRdPort.fifo_rd.o_data
     // Feed matmul kernel
     matmul.in.data             := f2SAF.o_saf
-    matmul.in.valid            := iFifoRdPort.fifo_rd.o_nempty
+    // FIFO is async read, so send valid 1 tick after nempty is
+    // asserted
+    matmul.in.valid            := RegNext(iFifoRdPort.fifo_rd.o_nempty)
     // Convert output back to float32
     SAF2F.i_saf                := matmul.out.data
     // Write to output FIFO as soon as data is valid (no "ready" mechanism)

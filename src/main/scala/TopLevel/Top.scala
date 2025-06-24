@@ -5,7 +5,7 @@ import chisel3._
 import chisel3.util._
 
 import matmul._
-import matmul.axi._
+import axi._
 import matmul.blackboxes._
 import matmul.utils.Parameters
 
@@ -97,7 +97,7 @@ class Top(
   kern.i_coreclk := coreclk_bufed
   kern.i_arstn   := sys_rst_n_c
 
-  // Clock domain-crossing
+  // Clock domain crossing
   kern.ififo_xwcnt <> axiW.ififo_xwcnt
   kern.ififo_xrcnt <> axiW.ififo_xrcnt
   kern.ofifo_xrcnt <> axiW.ofifo_xrcnt

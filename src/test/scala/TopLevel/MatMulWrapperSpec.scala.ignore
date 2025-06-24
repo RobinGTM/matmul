@@ -10,96 +10,23 @@ import org.scalatest.matchers.must.Matchers
 // to generate VCD traces with chisel 6.6.0
 import chisel3.simulator.VCDHackedEphemeralSimulator._
 
-import axi._
-import axi.interfaces._
 import matmul.utils.Parameters
-import matmul.utils.FakeClockDivider
-
-// CAREFUL: implicit reset is active low!
-class MatMulWrapperTest(
-  PARAM : Parameters
-) extends Module {
-  val axi_aclk  = IO(Input(Bool()))
-  val axi_arstn = IO(Input(Bool()))
-  val s_axi     = IO(new SlaveAXIInterface(PARAM.AXI_AW, PARAM.AXI_W))
-
-  // Modules
-  val axiW = Module(new AXIWrapper(PARAM))
-  val kern = Module(new MatMulWrapper(PARAM))
-
-  // FIFO memories
-  val iFifoMem = SyncReadMem(PARAM.FIFO_DEPTH, UInt(32.W))
-  val oFifoMem = SyncReadMem(PARAM.FIFO_DEPTH, UInt(32.W))
-
-  kern.i_coreclk := clock
-  kern.i_arstn   := reset
-
-  // Clock domain crossing
-  kern.ififo_xwcnt <> axiW.ififo_xwcnt
-  kern.ififo_xrcnt <> axiW.ififo_xrcnt
-  kern.ofifo_xrcnt <> axiW.ofifo_xrcnt
-  kern.ofifo_xwcnt <> axiW.ofifo_xwcnt
-
-  // AXI clock / reset
-  axiW.axi_aclk  := axi_aclk.asClock
-  axiW.axi_arstn := axi_arstn
-
-  // AXI interface
-  axiW.s_axi     <> s_axi
-
-  /* FIFO MEMORY LOGIC */
-  // Output FIFO
-  // Write
-  when(kern.ofifo_wmem.i_we) {
-    oFifoMem.write(kern.ofifo_wmem.i_addr, kern.ofifo_wmem.i_data, clock)
-  }
-  // Read
-  axiW.ofifo_rmem.o_data := oFifoMem.read(
-    axiW.ofifo_rmem.i_addr,
-    axiW.ofifo_rmem.i_en,
-    axi_aclk.asClock
-  )
-  // Input FIFO
-  // Write
-  when(axiW.ififo_wmem.i_we) {
-    iFifoMem.write(axiW.ififo_wmem.i_addr, axiW.ififo_wmem.i_data, axi_aclk.asClock)
-  }
-  // Read
-  kern.ififo_rmem.o_data := iFifoMem.read(
-    kern.ififo_rmem.i_addr, kern.ififo_rmem.i_en, clock
-  )
-}
 
 class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
   val param = Parameters(
-    16,
-    16,
-    "src/test/resources/dummy16-matrix.txt"
+    300,
+    300,
+    "src/main/resources/random300-matrix.txt"
   )
 
   "MatMulTop" should "work" in {
-    simulate(new MatMulWrapperTest(
+    simulate(new MatMulWrapper(
       PARAM = param
     )) { uut =>
       val randGen0 = new scala.util.Random
       val seed = randGen0.nextInt()
       // val seed = 540120093 // Good for 64x64
       val randGen = new scala.util.Random(seed)
-
-      // Fake slow clock generator
-      val clkDiv  = 3
-      val fakeClk = new FakeClockDivider(clkDiv)
-      // Step the fast clock
-      def step(n : Int = 1) : Unit = {
-        for(i <- 1 to n) {
-          fakeClk.update(uut.axi_aclk)
-          uut.clock.step()
-        }
-      }
-      // Step the slow clock
-      def stepSlow(n : Int = 1) : Unit = {
-        step(2 * n * clkDiv)
-      }
 
       def write_axi(addr : Int, data : List[UInt]) : Unit = {
         val pauseIdx = randGen.nextInt(data.length)
@@ -113,14 +40,14 @@ class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
         //   println(s"write_axi to ${addr} stalled")
         //   uut.clock.step()
         // }
-        stepSlow()
+        uut.clock.step()
         uut.s_axi.awvalid.poke(false)
         // Send wdata
         for(i <- 0 to data.length - 1) {
           if(i == pauseIdx) {
             println(s"Pausing write ${data(i)} to ${addr} for ${pauseDuration} ticks")
             uut.s_axi.wvalid.poke(false)
-            stepSlow(pauseDuration)
+            uut.clock.step(pauseDuration)
           }
           uut.s_axi.wdata.poke(data(i))
           uut.s_axi.wvalid.poke(true)
@@ -132,7 +59,7 @@ class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
           //   uut.clock.step()
           //   uut.s_axi.awvalid.poke(false)
           // }
-          stepSlow()
+          uut.clock.step()
           println(s"Sent ${data(i)} through AXI")
           uut.s_axi.awvalid.poke(false)
         }
@@ -140,11 +67,11 @@ class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
         uut.s_axi.wlast.poke(false)
         // Get bresp
         uut.s_axi.bready.poke(true)
-        // while(!uut.s_axi.bvalid.peek().litToBoolean) {
-        //   println(s"write_axi to ${addr} bresp stalled")
-        //   stepSlow()
-        // }
-        stepSlow()
+        while(!uut.s_axi.bvalid.peek().litToBoolean) {
+          println(s"write_axi to ${addr} bresp stalled")
+          uut.clock.step()
+        }
+        uut.clock.step()
         uut.s_axi.bready.poke(false)
       }
 
@@ -155,40 +82,34 @@ class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
         uut.s_axi.araddr.poke(addr)
         uut.s_axi.arvalid.poke(true)
         uut.s_axi.arlen.poke(len - 1)
-        // while(!uut.s_axi.arready.peek().litToBoolean) {
-        //   println(s"read_axi ${len} transfers at ${addr} stalled.")
-        //   stepSlow()
-        // }
+        while(!uut.s_axi.arready.peek().litToBoolean) {
+          println(s"read_axi ${len} transfers at ${addr} stalled.")
+          uut.clock.step()
+        }
         // uut.clock.step()
         // uut.s_axi.arvalid.poke(false)
         for(i <- 0 to len - 1) {
           if(i == pauseIdx) {
             println(s"Pausing read ${len} transfers at ${addr} for ${pauseDuration} ticks")
             uut.s_axi.rready.poke(false)
-            stepSlow()
+            uut.clock.step(pauseDuration)
           }
           uut.s_axi.rready.poke(true)
-          // while(!uut.s_axi.rvalid.peek().litToBoolean) {
-          //   println(s"Read addr ${addr} data number ${i} stalled by rvalid low.")
-          //   stepSlow()
-          // }
-          stepSlow()
+          while(!uut.s_axi.rvalid.peek().litToBoolean) {
+            println(s"Read addr ${addr} data number ${i} stalled by rvalid low.")
+            uut.clock.step()
+          }
+          uut.clock.step()
           println(s"Read ${uut.s_axi.rdata.peek().litValue} on transfer ${i}")
           uut.s_axi.arvalid.poke(false)
         }
       }
 
-      // Initial reset
-      uut.reset.poke(false)
-      uut.axi_arstn.poke(false)
-      // `+ 1` is very important: forces offset between slow and fast
-      // clocks, ensuring the simulation is accurate
-      step(4 * clkDiv + 1)
       uut.reset.poke(true)
-      uut.axi_arstn.poke(true)
-      // Offset slow and fast clocks to force right simulation
+      uut.clock.step(3)
+      uut.reset.poke(false)
 
-      stepSlow(4)
+      uut.clock.step(4)
 
       write_axi(123, List.tabulate(param.M_HEIGHT)(
         i => ("b" + java.lang.Float.floatToIntBits((i + 1).toFloat).toBinaryString).U
@@ -196,7 +117,7 @@ class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
 
       read_axi(111, 16)
 
-      stepSlow(255)
+      uut.clock.step(255)
 
       write_axi(123, List.tabulate(param.M_HEIGHT)(
         i => ("b" + java.lang.Float.floatToIntBits((2 * i + 1).toFloat).toBinaryString).U
@@ -204,7 +125,7 @@ class MatMulWrapperSpec extends AnyFlatSpec with Matchers {
 
       read_axi(111, 16)
 
-      stepSlow(255)
+      uut.clock.step(255)
     }
   }
 }

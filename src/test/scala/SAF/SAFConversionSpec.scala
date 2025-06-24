@@ -1,4 +1,4 @@
-package matmul.saf
+package saf
 
 import chisel3._
 import chisel3.util._
@@ -75,6 +75,10 @@ class Float32ToSAFSpec extends AnyFlatSpec with Matchers {
 
       // 3213212.34123
       uut.i_f32.poke("b01001010010001000001111001110001".U)
+      println(s"${uut.o_saf.peek()}")
+
+      // 0x1000000008C08000000
+      uut.i_f32.poke("h1000000008C08000000".U)
       println(s"${uut.o_saf.peek()}")
     }
   }

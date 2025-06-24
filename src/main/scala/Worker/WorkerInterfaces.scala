@@ -3,20 +3,26 @@ package matmul.worker
 import chisel3._
 import chisel3.util._
 
-import matmul.utils.Parameters
-
 package object interfaces {
   class WorkerInterface(
-    PARAM : Parameters
+    DW : Int
   ) extends Bundle {
-    val data  = UInt(PARAM.SAF_WIDTH.W)
-    val work  = Bool()
+    // Data
+    val data  = UInt(DW.W)
+    // Data valid flag
+    val valid = Bool()
+    // Prog flag (data must go in worker memory)
+    val prog  = Bool()
+    // Write flag (worker is sending its own accumulator on the bus)
+    val write = Bool()
   }
 
-  class WorkerHardFloatInterface(
-    PARAM : Parameters
-  ) extends Bundle {
-    val data = UInt((24 + 8 + 1).W)
-    val work = Bool()
-  }
+  // class WorkerOutput(
+  //   DW : Int
+  // ) extends Bundle {
+  //   val data  = Output(UInt(DW.W))
+  //   val valid = Output(Bool())
+  //   val prog  = Output(Bool())
+  //   val write = Output(Bool())
+  // }
 }

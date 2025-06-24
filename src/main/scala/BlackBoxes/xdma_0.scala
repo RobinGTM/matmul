@@ -6,7 +6,7 @@ import chisel3.util._
 import chisel3.experimental._
 
 // Local
-import matmul.axi.interfaces._
+import axi.interfaces._
 
 class xdma_0 extends BlackBox {
   val io = IO(new Bundle {

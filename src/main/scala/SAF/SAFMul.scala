@@ -1,4 +1,4 @@
-package matmul.saf
+package saf
 
 import chisel3._
 import chisel3.util._
@@ -40,11 +40,11 @@ class SAFMul(
 
   // Multiply mantissae
   val m1 = Mux(maA(W - 1),
-    1.U + ~ maA,
+    1.U + ~maA,
     maA
   )
   val m2 = Mux(maB(W - 1),
-    1.U + ~ maB,
+    1.U + ~maB,
     maB
   )
   private val PROD_UMA_W = 2 * W + L
@@ -53,7 +53,7 @@ class SAFMul(
   prodUMa := (m1 * m2) << resSh
 
   // Bring MSB back in right position: between W - 1 and 0
-  val msbPos = (PROD_UMA_W - 1).U - PriorityEncoder(Reverse(prodUMa))
+  val msbPos = PROD_UMA_W.U - PriorityEncoder(Reverse(prodUMa))
 
   val prEx = Wire(UInt((EW - L).W))
   val prUMa = Wire(UInt(PROD_UMA_W.W))
@@ -68,7 +68,7 @@ class SAFMul(
     prEx  := prodRe
   }
   val prMa = Mux(maA(W - 1) ^ maB(W - 1),
-    1.U + ~ prUMa(W - 1, 0),
+    1.U + ~prUMa(W - 1, 0),
     prUMa(W - 1, 0)
   )
 

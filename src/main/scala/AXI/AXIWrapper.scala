@@ -1,4 +1,4 @@
-package matmul.axi
+package axi
 
 // Chisel
 import chisel3._
@@ -9,7 +9,7 @@ import mcp.interfaces._
 import asyncfifo._
 import asyncfifo.interfaces._
 import adapters._
-import matmul.axi.interfaces._
+import axi.interfaces._
 import matmul.utils._
 
 class AXIWrapper(
@@ -34,7 +34,7 @@ class AXIWrapper(
   // Read memory interface
   val ofifo_rmem  = IO(new BasicMemReadInterface(PARAM.FIFO_CNT_W, UInt(PARAM.AXI_W.W)))
 
-  withClockAndReset(axi_aclk, axi_arstn) {
+  withClockAndReset(axi_aclk, ~axi_arstn) {
     /* MODULES */
     val axiIf = Module(new SAXIRW2Full(PARAM.AXI_AW, PARAM.AXI_W))
 

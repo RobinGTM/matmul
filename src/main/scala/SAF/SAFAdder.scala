@@ -1,4 +1,4 @@
-package matmul.saf
+package saf
 
 import chisel3._
 import chisel3.util._
@@ -38,6 +38,11 @@ class SAFAdder(
   val bShamt = sumRe - reB
   val sumMa  = (maA >> (aShamt << L)) +& (maB >> (bShamt << L))
 
+  // Unsigned sum mantissa
+  val uSumMa = Mux(sumMa(W), 1.U + ~sumMa.asUInt, sumMa.asUInt)
+  // Compute position of MSB
+  val msbPos = (W + 1).U - PriorityEncoder(Reverse(uSumMa))
+
   // Prime SAF conversion
   // Normalize if mantissa has its MSB set while none of the input
   // mantissae were negative (possible?)
@@ -45,8 +50,18 @@ class SAFAdder(
   // be interpreted as negative
   val outMa = Wire(UInt(W.W))
   val outRe = Wire(UInt((EW - L).W))
-  when((sumMa(W) | sumMa(W - 1)) & ~maA(W - 1) & ~maB(W - 1)) {
-    outMa := (sumMa.asUInt >> (1.U << L))(W - 1, 0)
+  // If MSB is set, must normalize
+  when(msbPos > (W - 1).U) {
+    outMa := (sumMa >> (1.U << L))(W - 1, 0).asUInt
+    // when(sumMa(W - 1) & ~maA(W - 1) & ~maB(W - 1)) {
+    //   // Negative overflow: result is negative while both operands are
+    //   // positive -> logical shift (result is positive)
+    //   outMa := (sumMa.asUInt >> (1.U << L))(W - 1, 0)
+    // } .otherwise {
+    //   // Positive overflow: result is positive while both operands are
+    //   // negative -> arithmetic shift (result is negative)
+    //   outMa := (sumMa >> (1.U << L))(W - 1, 0).asUInt
+    // }
     outRe := sumRe + 1.U
   } .otherwise {
     outMa := sumMa(W - 1, 0)

@@ -5,7 +5,7 @@ import chisel3._
 import chisel3.util._
 
 // Local
-import matmul.axi.interfaces._
+import axi.interfaces._
 import asyncfifo.interfaces._
 
 class FIFO2AXIMemory(

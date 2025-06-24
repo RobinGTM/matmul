@@ -1,4 +1,4 @@
-package matmul.saf
+package saf
 
 // Chisel
 import chisel3._
@@ -36,7 +36,7 @@ class SAFToFloat32(
   // Unsigned mantissa
   val euMa = Wire(UInt(W.W))
   euMa    := Mux(sign,
-    1.U + ~ esMa,
+    1.U + ~esMa,
     esMa
   )
   // 8-bit exponent
@@ -53,7 +53,8 @@ class SAFToFloat32(
     val msbPos = (W - 1).U - PriorityEncoder(Reverse(euMa))
     val high   = msbPos - 1.U
 
-    // Normalize (stolen from CuFP: https://github.com/FahimeHajizadeh/Custom-Float-HLS.git)
+    // Normalize (stolen from CuFP:
+    // https://github.com/FahimeHajizadeh/Custom-Float-HLS.git)
     // Low index
     val low = Mux(high < 23.U, 0.U, msbPos - 22.U)
     when(low === 0.U) {

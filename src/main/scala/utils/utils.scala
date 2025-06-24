@@ -26,7 +26,8 @@ package object utils {
       "0"
     } else {
       // Stolen from CuFP
-      // https://github.com/FahimeHajizadeh/Custom-Float-HLS/blob/main/CuFPSAF/src/custom_float.h in CuFPSAF
+      // https://github.com/FahimeHajizadeh/Custom-Float-HLS/blob/main/CuFPSAF/src/custom_float.h
+      // in CuFPSAF
       val reStr = exptStr.substring(0, 8 - L)
       val lsh   = Integer.parseInt(exptStr.substring(8 - L, 8), 2)
       val mtStr = if(expt == 0) {

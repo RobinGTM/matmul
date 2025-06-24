@@ -22,17 +22,14 @@ class PipelinedWorker(
 
   /* INTERNAL REGISTERS */
   // Memory (ROM)
-  val workerMem        = VecInit(PARAM.memData(WID).toIndexedSeq.map(_.U(PARAM.SAF_WIDTH.W)))
+  val workerMem   = VecInit(PARAM.memData(WID).toIndexedSeq.map(_.U(PARAM.SAF_WIDTH.W)))
   // Accumulator
-  val accReg           = RegInit(0.U(PARAM.SAF_WIDTH.W))
+  val accReg      = RegInit(0.U(PARAM.SAF_WIDTH.W))
   // Input counter: counts the coefficients of the input vector
-  val inCntReg         = RegInit(0.U(log2Up(PARAM.M_HEIGHT).W))
-  val inPipelineCntReg = RegNext(inCntReg)
-  /* WRITE CONTROL SIGNAL */
-  val doWriteReg       = RegInit(false.B)
-  when(RegNext(inCntReg) === (PARAM.M_HEIGHT - 1).U) {
-    doWriteReg := true.B
-  }
+  val inCntReg    = RegInit(0.U(log2Up(PARAM.M_HEIGHT + 1).W))
+  val writeCntReg = RegInit(0.U(log2Up(WID + 1).W))
+  // Write control signal
+  val doWriteReg  = RegInit(false.B)
 
   /* MODULES */
   // SAF adder
@@ -59,20 +56,33 @@ class PipelinedWorker(
   }
 
   /* FSM LOGIC */
-  // When receiving write, pass through the data from previous workers in the
-  // pipeline, and append accumulator data
-  when(in.work & ~doWriteReg) {
+  // Write state
+  when(RegNext(inCntReg) === (PARAM.M_HEIGHT).U) {
+    doWriteReg := true.B
+    inCntReg   := 0.U
+  }
+  // Input counter
+  when(in.work & ~doWriteReg & ~(inCntReg === (PARAM.M_HEIGHT).U)) {
     inCntReg := inCntReg + 1.U
   }
 
-  /* OUTPUT REGISTERS */
-  // When getting a falling edge on work while in write mode, send own data
+  // When receiving write, pass through the data from previous workers
+  // in the pipeline, and append accumulator data
   when(doWriteReg) {
-    out.data   := accReg
-    out.work   := true.B
-    accReg     := 0.U
-    inCntReg   := 0.U
-    doWriteReg := false.B
+    when(writeCntReg === WID.U) {
+      out.data    := accReg
+      out.work    := true.B
+      accReg      := 0.U
+      writeCntReg := 0.U
+      doWriteReg  := false.B
+    } .elsewhen(in.work | (~in.work & RegNext(in.work)) & ~(writeCntReg === WID.U)) {
+      out.data    := RegNext(in.data)
+      out.work    := true.B
+      writeCntReg := writeCntReg + 1.U
+    } .otherwise {
+      out.data    := 0.U
+      out.work    := false.B
+    }
   } .otherwise {
     // Otherwise, forward if not last worker
     if (WID == PARAM.M_HEIGHT - 1) {
