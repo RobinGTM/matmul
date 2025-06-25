@@ -23,6 +23,9 @@ class MatMul(
   val i = IO(Input(new MatMulInterface(DW)))
   val o = IO(Output(new MatMulInterface(DW)))
 
+  /* STATE */
+  val readyReg = RegInit(true.B)
+
   /* WORKER UNITS */
   val workers = for(w <- 0 to M_HEIGHT - 1) yield {
     val wk = Module(new Worker(
@@ -59,4 +62,16 @@ class MatMul(
   o.valid := workers(M_HEIGHT - 1).o.valid & workers(M_HEIGHT - 1).o.write
   // No prog signal on output
   o.prog  := false.B
+
+  /* READY LOGIC */
+  when(i.valid & ~i.prog) {
+    readyReg := false.B
+  } .elsewhen(
+    ~i.valid & ~workers(M_HEIGHT - 1).o.valid &
+    RegNext(workers(M_HEIGHT - 1).o.valid)
+  ) {
+    readyReg := true.B
+  }
+
+  o.ready := readyReg & ~(i.valid & ~i.prog)
 }

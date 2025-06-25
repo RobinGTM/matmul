@@ -1,5 +1,6 @@
 package matmul
 
+import chisel3._
 import chisel3.util._
 
 import java.lang.Float.floatToIntBits
@@ -46,6 +47,16 @@ package object utils {
       }
       reStr.concat(maStr)
     }
+  }
+
+  def floatToSAFUInt(
+    f   : Float,
+    L   : Int = 5,
+    W   : Int = 70,
+    B   : Int = 150,
+    L2N : Int = 16
+  ) : UInt = {
+    ("b" + floatToSAF(f)).U
   }
 
   // Read matrix file in SAF format

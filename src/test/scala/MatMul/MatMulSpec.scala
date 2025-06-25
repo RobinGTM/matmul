@@ -17,7 +17,7 @@ class MatMulSpec extends AnyFlatSpec with Matchers {
   val file = "src/test/resources/dummy16-matrix.txt"
   val MH = 16
   val MW = 16
-  val USE_HARDFLOAT = false
+  val USE_HARDFLOAT = true
 
   "MatMul" should "work" in {
     simulate(new MatMul(
@@ -57,7 +57,29 @@ class MatMulSpec extends AnyFlatSpec with Matchers {
       // uut.clock.step()
 
       for(i <- 0 to MW - 1) {
-        uut.i.data.poke(("b" + floatToSAF((i + 1).toFloat)).U)
+        if(USE_HARDFLOAT) {
+          uut.i.data.poke(floatToBitsUInt((i + 1).toFloat))
+        } else {
+          uut.i.data.poke(floatToSAFUInt((i + 1).toFloat))
+        }
+        uut.i.valid.poke(true)
+        uut.clock.step()
+      }
+      uut.i.data.poke(0)
+      uut.i.valid.poke(false)
+
+      uut.clock.step()
+
+      while(!uut.o.ready.peek().litToBoolean) {
+        uut.clock.step()
+      }
+
+      for(i <- 0 to MW - 1) {
+        if(USE_HARDFLOAT) {
+          uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
+        } else {
+          uut.i.data.poke(floatToSAFUInt((- i - 1).toFloat))
+        }
         uut.i.valid.poke(true)
         uut.clock.step()
       }

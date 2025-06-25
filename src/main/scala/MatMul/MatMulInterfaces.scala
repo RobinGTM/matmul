@@ -14,5 +14,6 @@ package object interfaces {
     val data  = UInt(DW.W)
     val valid = Bool()
     val prog  = Bool()
+    val ready = Bool()
   }
 }

@@ -34,5 +34,6 @@ mat = np.array([
 
 b = np.array(range(1, 17))
 print(np.dot(mat, b))
+print(np.dot(mat, -b))
 
 # print(np.dot(mat2, b))

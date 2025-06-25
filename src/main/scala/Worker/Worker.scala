@@ -135,24 +135,25 @@ class Worker(
   dontTouch(wCntRegNextNext)
   dontTouch(mPtrRegNextNext)
 
-  when(oReg.valid) {
-    when(oReg.prog) {
-      when(RegNext(RegNext(wCntReg)) < (M_HEIGHT - 1).U - wid) {
-        o := oReg
-      } .otherwise {
-        o := 0.U.asTypeOf(o)
-      }
-    } .elsewhen(oReg.write) {
-      o   := oReg
-    } .otherwise {
-      o   := oReg
-    }
-  } .elsewhen(
+  val sendAcc = (
     RegNext(RegNext(wCntReg)) === wid &
-    RegNext(oReg.valid & ~oReg.prog &
+    RegNext(
+      oReg.valid & ~oReg.prog &
       (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (M_HEIGHT - 1).U))
     )
-  ) {
+  )
+
+  when(oReg.valid) {
+    when(oReg.prog & RegNext(RegNext(wCntReg)) >= (M_HEIGHT - 1).U - wid) {
+      o := 0.U.asTypeOf(o)
+    } .otherwise {
+      when(wid === (M_HEIGHT - 1).U & ~oReg.write) {
+        o := 0.U.asTypeOf(o)
+      } .otherwise {
+        o := oReg
+      }
+    }
+  } .elsewhen(sendAcc) {
     if(USE_HARDFLOAT) {
       o.data := fNFromRecFN(8, 24, accReg)
     } else {
@@ -163,6 +164,8 @@ class Worker(
     o.prog  := false.B
     // Reset worker counter
     wCntReg := 0.U
+    // Reset accumulator
+    accReg  := 0.U
   } .otherwise {
     o := 0.U.asTypeOf(o)
   }
