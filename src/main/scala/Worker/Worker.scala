@@ -9,20 +9,20 @@ import matmul.utils.Parameters
 import hardfloat._
 
 class Worker(
-  // Data width
-  DW            : Int,
   // Matrix height (number of workers)
   M_HEIGHT      : Int,
   // Matrix width (number of coefficients stored in each worker)
   M_WIDTH       : Int,
   // Whether or not to use the berkeley-hardfloat package for floating
   // point computations
-  USE_HARDFLOAT : Boolean,
-  SAF_L         : Int = 5,
-  SAF_W         : Int = 70,
-  SAF_B         : Int = 150,
-  SAF_L2N       : Int = 16
+  USE_HARDFLOAT : Boolean = false,
+  SAF_L         : Int     = 5,
+  SAF_W         : Int     = 70,
+  SAF_B         : Int     = 150,
+  SAF_L2N       : Int     = 16
 ) extends Module {
+  // Data width
+  private val DW = if(USE_HARDFLOAT) { 32 } else { 8 - SAF_L + SAF_W }
   // If hardfloat is used, float is 32-bit
   require((USE_HARDFLOAT && DW == 32) || (!USE_HARDFLOAT))
   /* I/O */
@@ -91,8 +91,6 @@ class Worker(
   // When data comes in with valid & write set, forward the first
   // WID - 1 values, then send own accumulator
 
-  /* WIRING */
-  // Logic acts on input register
   // Counter logic
   when(i.valid) {
     when(i.prog) {
@@ -124,33 +122,47 @@ class Worker(
     }
   }
 
-  // Output register logic and data routing
-  when(iReg.valid) {
-    when(iReg.prog) {
-      //// RegNext(wCntReg)?????
-      when(wCntReg === (M_HEIGHT - 1).U - wid) {
-        //// RegNext(mPtrReg)?????
-        wkMem.write(mPtrReg, i.data)
-        o := 0.U.asTypeOf(o)
-      } .otherwise {
-        // Forward incoming data
-        o := oReg
-      }
-    } .elsewhen(iReg.write) {
-      //// RegNext(wCntReg)?????
-      when(RegNext(wCntReg) === wid) {
-        // Generate data: send own acc on the bus
-        o.data  := accReg
-        o.valid := true.B
-        o.prog  := false.B
-        o.write := true.B
-      } .otherwise {
-        // Forward incoming pipelined data
-        o       := oReg
-      }
-    } .otherwise {
-      o := oReg
+  // Programming logic
+  when(i.valid & i.prog) {
+    when(wCntReg === (M_HEIGHT - 1).U - wid) {
+      wkMem.write(mPtrReg, i.data)
     }
+  }
+
+  // Output logic
+  val wCntRegNextNext = RegNext(RegNext(wCntReg))
+  val mPtrRegNextNext = RegNext(RegNext(mPtrReg))
+  dontTouch(wCntRegNextNext)
+  dontTouch(mPtrRegNextNext)
+
+  when(oReg.valid) {
+    when(oReg.prog) {
+      when(RegNext(RegNext(wCntReg)) < (M_HEIGHT - 1).U - wid) {
+        o := oReg
+      } .otherwise {
+        o := 0.U.asTypeOf(o)
+      }
+    } .elsewhen(oReg.write) {
+      o   := oReg
+    } .otherwise {
+      o   := oReg
+    }
+  } .elsewhen(
+    RegNext(RegNext(wCntReg)) === wid &
+    RegNext(oReg.valid & ~oReg.prog &
+      (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (M_HEIGHT - 1).U))
+    )
+  ) {
+    if(USE_HARDFLOAT) {
+      o.data := fNFromRecFN(8, 24, accReg)
+    } else {
+      o.data := accReg
+    }
+    o.valid := true.B
+    o.write := true.B
+    o.prog  := false.B
+    // Reset worker counter
+    wCntReg := 0.U
   } .otherwise {
     o := 0.U.asTypeOf(o)
   }
@@ -174,10 +186,8 @@ class Worker(
     hardAdder.io.roundingMode   := 0.U
     hardAdder.io.detectTininess := 0.U
     // Wiring
-    hardMul.io.a    := recFNFromFN(8, 24, coeff)
-    when(RegNext(iDoAcc)) {
-      hardMul.io.b  := recFNFromFN(8, 24, iReg.data)
-    }
+    hardMul.io.a := recFNFromFN(8, 24, coeff)
+    hardMul.io.b := recFNFromFN(8, 24, iReg.data)
     // MAC pipeline
     macReg := hardMul.io.out
     // Adder
@@ -188,9 +198,9 @@ class Worker(
     }
   } else {
     // SAF multiplier
-    val safMul   = Module(new SAFMul(SAF_L, SAF_W, SAF_B, SAF_L2N))
+    val safMul     = Module(new SAFMul(SAF_L, SAF_W, SAF_B, SAF_L2N))
     // SAF adder
-    val safAdder = Module(new SAFAdder(SAF_L, SAF_W, SAF_B, SAF_L2N))
+    val safAdder   = Module(new SAFAdder(SAF_L, SAF_W, SAF_B, SAF_L2N))
     // Multiplier wiring
     safMul.i_safA := coeff
     safMul.i_safB := iReg.data

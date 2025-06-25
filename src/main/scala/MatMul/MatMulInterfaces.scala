@@ -8,16 +8,11 @@ import chisel3.util._
 import matmul.utils.Parameters
 
 package object interfaces {
-  class MatMulInput(
+  class MatMulInterface(
     DW : Int
   ) extends Bundle {
-    val data  = Input(UInt(DW.W))
-    val valid = Input(Bool())
-  }
-  class MatMulOutput(
-    DW : Int
-  ) extends Bundle {
-    val data  = Output(UInt(DW.W))
-    val valid = Output(Bool())
+    val data  = UInt(DW.W)
+    val valid = Bool()
+    val prog  = Bool()
   }
 }

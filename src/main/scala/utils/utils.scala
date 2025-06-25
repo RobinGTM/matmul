@@ -97,13 +97,13 @@ package object utils {
   ) {
     // SAF total width
     val SAF_WIDTH = 8 - SAF_L + SAF_W
-    val memData   = readCSVSAF(WEIGHT_FILE, SAF_L, SAF_W, SAF_B, SAF_L2N)
-    // val memData   = readCSVFloat(WEIGHT_FILE)
-    def floatToSAF(f : Float) : String = {
-      matmul.utils.floatToSAF(f, SAF_L, SAF_W, SAF_B, SAF_L2N)
+    val memData = if(USE_HARDFLOAT) {
+      readCSVFloat(WEIGHT_FILE)
+    } else {
+      readCSVSAF(WEIGHT_FILE, SAF_L, SAF_W, SAF_B, SAF_L2N)
     }
     // AXI buses
-    val AXI_W = 64
+    val AXI_W  = 64
     val AXI_AW = 64
     // Leave some room
     val FIFO_DEPTH = 4 * M_HEIGHT

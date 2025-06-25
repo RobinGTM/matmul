@@ -12,42 +12,47 @@ import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 import math.pow
 
-import matmul.utils.Parameters
+import matmul.utils._
+import matmul.testutils._
 
 class WorkerSpec extends AnyFlatSpec with Matchers {
-  val param = Parameters(16, 16, "src/test/resources/dummy16-matrix.txt")
   val MH = 16
   val MW = 16
+  val USE_HARDFLOAT = true
+  val DW = if(USE_HARDFLOAT) {
+    32
+  } else {
+    73
+  }
 
   "Worker" should "work_lol" in {
     simulate(new Worker(
-      DW       = 73,
       M_HEIGHT = MH,
       M_WIDTH  = MW,
-      USE_HARDFLOAT = false
+      USE_HARDFLOAT = USE_HARDFLOAT
     )) { uut =>
       uut.reset.poke(true)
       uut.clock.step(3)
       uut.reset.poke(false)
 
-      // // Last block only receives its own data
-      // uut.wid.poke(MH - 1)
-      // for(i <- 1 to 16) {
-      //   uut.i.data.poke(
-      //     ("b" + param.floatToSAF(pow(-1, ((i + 1) % 2)).toFloat * i.toFloat)).U
-      //   )
-      //   uut.i.valid.poke(true)
-      //   uut.i.prog.poke(true)
-      //   uut.clock.step()
-      // }
+      val ID = 0
 
-      // First worker has to pass all prog data
-      uut.wid.poke(0)
-      for(i <- 1 to MH * MW) {
-        // uut.i.data.poke(
-        //   ("b" + param.floatToSAF(pow(-1, ((i + 1) % 2)).toFloat * i.toFloat)).U
-        // )
-        uut.i.data.poke(i)
+      // Last block only receives its own data
+      uut.wid.poke(ID)
+      for(i <- 1 to MW * MH - 16 * ID) {
+        val coeff = pow(-1, ((i + 1) % 2)).toFloat * i.toFloat
+        if(USE_HARDFLOAT) {
+          uut.i.data.poke(floatToBitsUInt(coeff))
+          //   ("b" + String.format(
+          //     "%32s", java.lang.Float.floatToIntBits(coeff).toBinaryString
+          //   ).replace(' ', '0')).U
+          // )
+        } else {
+          uut.i.data.poke(
+            ("b" + floatToSAF(coeff)).U
+          )
+        }
+        // uut.i.data.poke(i)
         uut.i.valid.poke(true)
         uut.i.prog.poke(true)
         uut.clock.step()
@@ -57,8 +62,18 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
 
       uut.clock.step(10)
 
-      for(i <- 1 to 16) {
-        uut.i.data.poke(("b" + param.floatToSAF(10 * i.toFloat)).U)
+      // Send vector
+      for(i <- 1 to MW) {
+        val v = 10 * i.toFloat
+        if(USE_HARDFLOAT) {
+          uut.i.data.poke(
+            ("b" + String.format(
+              "%32s", java.lang.Float.floatToIntBits(v).toBinaryString
+            ).replace(' ', '0')).U
+          )
+        } else {
+          uut.i.data.poke(("b" + floatToSAF(v)).U)
+        }
         uut.i.valid.poke(true)
         uut.clock.step()
         if(i == 5) {
@@ -67,7 +82,20 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
         }
       }
       uut.i.valid.poke(false)
-      uut.clock.step(10)
+      // uut.clock.step(10)
+
+      // uut.clock.step(16)
+
+      // Write command
+      for(i <- 1 to ID) {
+        uut.i.write.poke(true)
+        uut.i.valid.poke(true)
+        uut.i.data.poke(i)
+        uut.clock.step()
+      }
+      uut.i.write.poke(false)
+      uut.i.valid.poke(false)
+      uut.i.data.poke(0xffff)
 
       uut.clock.step(16)
     }
