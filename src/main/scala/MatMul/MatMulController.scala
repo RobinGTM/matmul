@@ -60,7 +60,7 @@ class MatMulController(
   }
 
   // SAF flag
-  ctlReg(CTL_SAF) := (!USE_HARDFLOAT).B
+  ctlReg(PARAM.CTL_SAF) := (!PARAM.USE_HARDFLOAT).B
 
   /* FSM */
   s_axis.tready := from_matmul.ready
