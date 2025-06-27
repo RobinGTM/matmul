@@ -9,24 +9,14 @@ import matmul.utils.Parameters
 import hardfloat._
 
 class Worker(
-  // Matrix height (number of workers)
-  M_HEIGHT      : Int,
-  // Matrix width (number of coefficients stored in each worker)
-  M_WIDTH       : Int,
-  // Whether or not to use the berkeley-hardfloat package for floating
-  // point computations
-  USE_HARDFLOAT : Boolean = false,
-  SAF_L         : Int     = 5,
-  SAF_W         : Int     = 70,
-  SAF_B         : Int     = 150,
-  SAF_L2N       : Int     = 16
+  PARAM : Parameters
 ) extends Module {
   // Data width
-  private val DW = if(USE_HARDFLOAT) { 32 } else { 8 - SAF_L + SAF_W }
+  private val DW = if(PARAM.USE_HARDFLOAT) { 32 } else { PARAM.SAF_WIDTH }
   // If hardfloat is used, float is 32-bit
-  require((USE_HARDFLOAT && DW == 32) || (!USE_HARDFLOAT))
+  // require((PARAM.USE_HARDFLOAT && DW == 32) || (!PARAM.USE_HARDFLOAT))
   /* I/O */
-  private val WID_W = log2Up(M_HEIGHT)
+  private val WID_W = log2Up(PARAM.M_HEIGHT)
   // Worker ID: Passed as input to prevent Chisel from creating lots
   // of identical modules that just change by one parameter
   val wid = IO(Input(UInt(WID_W.W)))
@@ -38,14 +28,14 @@ class Worker(
   // Input buffer
   val iReg    = RegNext(i)
   // Multiplicator-adder pipeline register
-  val macReg  = if(USE_HARDFLOAT) {
+  val macReg  = if(PARAM.USE_HARDFLOAT) {
     // When using hardfloat, store recFNs, which are 1 bit wider
     RegInit(0.U((DW + 1).W))
   } else {
     RegInit(0.U((DW).W))
   }
   // Accumulator
-  val accReg  = if(USE_HARDFLOAT) {
+  val accReg  = if(PARAM.USE_HARDFLOAT) {
     // When using hardfloat, store recFNs, which are 1 bit wider
     RegInit(0.U((DW + 1).W))
   } else {
@@ -54,14 +44,14 @@ class Worker(
   // Output buffer
   val oReg    = RegNext(iReg)
   // Worker memory (matrix coefficients)
-  val wkMem   = SyncReadMem(M_WIDTH, UInt(DW.W))
+  val wkMem   = SyncReadMem(PARAM.M_WIDTH, UInt(DW.W))
   // Memory address pointer
-  val mPtrReg = RegInit(0.U(log2Up(M_WIDTH).W))
+  val mPtrReg = RegInit(0.U(log2Up(PARAM.M_WIDTH).W))
   // Worker counter
   // NB: Not really optimal since each worker only needs to count up
   // to its wid, but setting wid as a parameter would make Chisel
   // generate tons of SV modules that only differ by their WID
-  val wCntReg = RegInit(0.U(log2Up(M_HEIGHT).W))
+  val wCntReg = RegInit(0.U(log2Up(PARAM.M_HEIGHT).W))
   // State registers
   // Forward prog data to next worker
   val pFwdReg = RegInit(false.B)
@@ -100,10 +90,10 @@ class Worker(
       // prog data will be treated as new data for the last block
       mPtrReg := mPtrReg + 1.U
       // Counter logic
-      when(mPtrReg === (M_WIDTH - 1).U) {
+      when(mPtrReg === (PARAM.M_WIDTH - 1).U) {
         mPtrReg := 0.U
         wCntReg := wCntReg + 1.U
-        when(wCntReg === (M_HEIGHT - 1).U - wid) {
+        when(wCntReg === (PARAM.M_HEIGHT - 1).U - wid) {
           // Reset wCntReg
           wCntReg := 0.U
         }
@@ -124,7 +114,7 @@ class Worker(
 
   // Programming logic
   when(i.valid & i.prog) {
-    when(wCntReg === (M_HEIGHT - 1).U - wid) {
+    when(wCntReg === (PARAM.M_HEIGHT - 1).U - wid) {
       wkMem.write(mPtrReg, i.data)
     }
   }
@@ -139,22 +129,22 @@ class Worker(
     RegNext(RegNext(wCntReg)) === wid &
     RegNext(
       oReg.valid & ~oReg.prog &
-      (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (M_HEIGHT - 1).U))
+      (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (PARAM.M_HEIGHT - 1).U))
     )
   )
 
   when(oReg.valid) {
-    when(oReg.prog & RegNext(RegNext(wCntReg)) >= (M_HEIGHT - 1).U - wid) {
+    when(oReg.prog & RegNext(RegNext(wCntReg)) >= (PARAM.M_HEIGHT - 1).U - wid) {
       o := 0.U.asTypeOf(o)
     } .otherwise {
-      when(wid === (M_HEIGHT - 1).U & ~oReg.write) {
+      when(wid === (PARAM.M_HEIGHT - 1).U & ~oReg.write) {
         o := 0.U.asTypeOf(o)
       } .otherwise {
         o := oReg
       }
     }
   } .elsewhen(sendAcc) {
-    if(USE_HARDFLOAT) {
+    if(PARAM.USE_HARDFLOAT) {
       o.data := fNFromRecFN(8, 24, accReg)
     } else {
       o.data := accReg
@@ -178,7 +168,7 @@ class Worker(
   // accumulator content to next worker with write flag on
 
   /* MODULES */
-  if(USE_HARDFLOAT) {
+  if(PARAM.USE_HARDFLOAT) {
     // hardfloat multiplier
     val hardMul   = Module(new MulRecFN(8, 24))
     hardMul.io.roundingMode   := 0.U
@@ -201,9 +191,9 @@ class Worker(
     }
   } else {
     // SAF multiplier
-    val safMul     = Module(new SAFMul(SAF_L, SAF_W, SAF_B, SAF_L2N))
+    val safMul     = Module(new SAFMul(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
     // SAF adder
-    val safAdder   = Module(new SAFAdder(SAF_L, SAF_W, SAF_B, SAF_L2N))
+    val safAdder   = Module(new SAFAdder(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
     // Multiplier wiring
     safMul.i_safA := coeff
     safMul.i_safB := iReg.data

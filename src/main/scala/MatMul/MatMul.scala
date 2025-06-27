@@ -1,77 +1,35 @@
 package matmul
 
+// Chisel
 import chisel3._
 import chisel3.util._
 
-import matmul.worker.Worker
-import matmul.interfaces._
-import matmul.utils.Parameters
+// Local
+import mcp.interfaces
+import asyncfifo._
+import asyncfifo.interfaces._
+import axi.interfaces._
+import matmul.utils._
 
 class MatMul(
-  M_HEIGHT      : Int = 16,
-  M_WIDTH       : Int = 16,
-  USE_HARDFLOAT : Boolean = false,
-  SAF_L         : Int     = 5,
-  SAF_W         : Int     = 70,
-  SAF_B         : Int     = 150,
-  SAF_L2N       : Int     = 16
+  PARAM : Parameters
 ) extends Module {
-  // Data width
-  private val DW = if(USE_HARDFLOAT) { 32 } else { 8 - SAF_L + SAF_W }
+  val ctl_reg = IO(new BasicRegInterface(PARAM.CTL_AW, PARAM.CTL_W))
+  // AXI-Stream from FIFO
+  // MatMul controller receives IEEE754 float32 data
+  val s_axis = IO(new SlaveAXIStreamInterfaceNoTid(32))
+  // From MatMul output to FIFO
+  val m_axis = IO(new MasterAXIStreamInterfaceNoTid(32))
 
-  /* I/O */
-  val i = IO(Input(new MatMulInterface(DW)))
-  val o = IO(Output(new MatMulInterface(DW)))
+  val matmulCore = Module(new MatMulCore(PARAM))
+  val matmulCtl  = Module(new MatMulController(PARAM))
 
-  /* STATE */
-  val readyReg = RegInit(true.B)
+  // Data and control paths go to controller
+  matmulCtl.ctl_reg <> ctl_reg
+  matmulCtl.s_axis  <> s_axis
+  matmulCtl.m_axis  <> m_axis
 
-  /* WORKER UNITS */
-  val workers = for(w <- 0 to M_HEIGHT - 1) yield {
-    val wk = Module(new Worker(
-      M_HEIGHT      = M_HEIGHT,
-      M_WIDTH       = M_WIDTH,
-      USE_HARDFLOAT = USE_HARDFLOAT,
-      SAF_L         = SAF_L,
-      SAF_W         = SAF_W,
-      SAF_B         = SAF_B,
-      SAF_L2N       = SAF_L2N
-    ))
-    // Plug WID
-    wk.wid := w.U
-    // Yield worker
-    wk
-  }
-
-  /* WIRING */
-  // Input
-  workers(0).i.data  := i.data
-  workers(0).i.valid := i.valid
-  workers(0).i.prog  := i.prog
-  // Worker 0 generates the WRITE command itself
-  workers(0).i.write := false.B
-
-  // Worker chain
-  for(w <- 1 to M_HEIGHT - 1) {
-    workers(w).i <> workers(w - 1).o
-  }
-
-  // Output
-  o.data  := workers(M_HEIGHT - 1).o.data
-  // Only WRITE data is output
-  o.valid := workers(M_HEIGHT - 1).o.valid & workers(M_HEIGHT - 1).o.write
-  // No prog signal on output
-  o.prog  := false.B
-
-  /* READY LOGIC */
-  when(i.valid & ~i.prog) {
-    readyReg := false.B
-  } .elsewhen(
-    ~i.valid & ~workers(M_HEIGHT - 1).o.valid &
-    RegNext(workers(M_HEIGHT - 1).o.valid)
-  ) {
-    readyReg := true.B
-  }
-
-  o.ready := readyReg & ~(i.valid & ~i.prog)
+  // Internal datapaths go to core
+  matmulCtl.to_matmul <> matmulCore.i
+  matmulCore.o        <> matmulCtl.from_matmul
 }

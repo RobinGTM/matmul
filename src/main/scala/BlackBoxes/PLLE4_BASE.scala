@@ -5,9 +5,12 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental._
 
-class PLLE4_BASE extends BlackBox(Map(
-  "CLKFBOUT_MULT" -> "9",
-  "CLKOUT0_DIVIDE" -> "4",
+class PLLE4_BASE(
+  PLL_MULT : Int,
+  PLL_DIV  : Int
+) extends BlackBox(Map(
+  "CLKFBOUT_MULT" -> PLL_MULT.toString,
+  "CLKOUT0_DIVIDE" -> PLL_DIV.toString,
   "IS_RST_INVERTED" -> "1'b1"
 )) {
   val io = IO(new Bundle {

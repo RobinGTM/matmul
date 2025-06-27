@@ -1285,7 +1285,7 @@
         "DEVICE": [ { "value": "xcu200" } ],
         "NEXTGEN_VERSAL": [ { "value": "0" } ],
         "PACKAGE": [ { "value": "fsgd2104" } ],
-        "PREFHDL": [ { "value": "VHDL" } ],
+        "PREFHDL": [ { "value": "VERILOG" } ],
         "SILICON_REVISION": [ { "value": "" } ],
         "SIMULATOR_LANGUAGE": [ { "value": "MIXED" } ],
         "SPEEDGRADE": [ { "value": "-2" } ],
@@ -1299,7 +1299,7 @@
         "OUTPUTDIR": [ { "value": "../../../../xdma_0_ex.gen/sources_1/ip/xdma_0" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],
         "SHAREDDIR": [ { "value": "../../ipshared" } ],
-        "SWVERSION": [ { "value": "2024.1" } ],
+        "SWVERSION": [ { "value": "2024.1_AR000036820" } ],
         "SYNTHESISFLOW": [ { "value": "GLOBAL" } ]
       }
     },

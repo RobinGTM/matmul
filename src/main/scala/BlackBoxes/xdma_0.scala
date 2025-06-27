@@ -25,6 +25,8 @@ class xdma_0 extends BlackBox {
     val axi_aclk       = Output(Clock())
     val axi_aresetn    = Output(Bool())
 
+    // AXI-Lite master interface
+    val m_axil = Flipped(new SlaveAXILiteInterface(32, 32))
     // AXI-MM master interface
     val m_axi  = Flipped(new SlaveAXIInterface(64, 64))
   })

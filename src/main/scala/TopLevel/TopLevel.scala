@@ -9,7 +9,8 @@ import axi._
 import matmul.blackboxes._
 import matmul.utils.Parameters
 
-class Top(
+// XDMA example-inspired top-level module
+class TopLevel(
   PARAM : Parameters
 ) extends RawModule {
   /* I/O */
@@ -20,13 +21,13 @@ class Top(
   val pci_exp_rxn = IO(Input(Bool()))
 
   // Clock and reset
-  val sys_clk_p   = IO(Input(Clock()))
-  val sys_clk_n   = IO(Input(Clock()))
-  val sys_rst_n   = IO(Input(Bool()))
+  val sys_clk_p = IO(Input(Clock()))
+  val sys_clk_n = IO(Input(Clock()))
+  val sys_rst_n = IO(Input(Bool()))
 
   // Core clock
-  val coreclk_p   = IO(Input(Clock()))
-  val coreclk_n   = IO(Input(Clock()))
+  val coreclk_ref_p = IO(Input(Clock()))
+  val coreclk_ref_n = IO(Input(Clock()))
 
   /* BUFFERS */
   val sysClkIBuf = Module(new IBUFDS_GTE4)
@@ -49,14 +50,14 @@ class Top(
 
   /* CORE CLOCK GENERATION */
   val coreClkIBufDS = Module(new IBUFDS)
-  val coreClkPll    = Module(new PLLE4_BASE)
+  val coreClkPll    = Module(new PLLE4_BASE(PARAM.PLL_MULT, PARAM.PLL_DIV))
   val coreClkBufG   = Module(new BUFG)
 
   /* CORE CLOCK WIRING */
   // Reference clock (156.25MHz differential)
   val coreclk_ref = Wire(Clock())
-  coreClkIBufDS.io.I   := coreclk_p
-  coreClkIBufDS.io.IB  := coreclk_n
+  coreClkIBufDS.io.I   := coreclk_ref_p
+  coreClkIBufDS.io.IB  := coreclk_ref_n
   coreclk_ref          := coreClkIBufDS.io.O
   // PLL
   val pll_locked         = Wire(Bool())
@@ -76,45 +77,54 @@ class Top(
   val axi_aclk    = Wire(Clock())
   val axi_aresetn = Wire(Bool())
 
-  // XDMA instance
+  // XDMA instance (black-box)
   val xdma = Module(new xdma_0)
 
   // AXI wrapper
-  val axiW = Module(new AXIWrapper(PARAM))
+  val axiW = Module(new AXIWrapper(
+    PARAM.FIFO_CNT_W,
+    PARAM.CTL_AW,
+    PARAM.CTL_W,
+    PARAM.AXI_AW,
+    PARAM.AXI_W
+  ))
 
-  // MatMul kernel
-  val kern = Module(new MatMulWrapper(PARAM))
-  // val kern = withClockAndReset(axi_aclk, ~axi_aresetn) {
-  //   Module(new MatMulHardFloatWrapper(PARAM))
-  // }
+  // MatMul core
+  val core = Module(new CoreWrapper(PARAM))
 
   // FIFO memories
   val iFifoMem = SyncReadMem(PARAM.FIFO_DEPTH, UInt(32.W))
   val oFifoMem = SyncReadMem(PARAM.FIFO_DEPTH, UInt(32.W))
 
   /* WIRING */
-  // Kernel wiring
-  kern.i_coreclk := coreclk_bufed
-  kern.i_arstn   := sys_rst_n_c
+  // Coreel wiring
+  core.i_coreclk := coreclk_bufed
+  core.i_arstn   := sys_rst_n_c
 
-  // Clock domain crossing
-  kern.ififo_xwcnt <> axiW.ififo_xwcnt
-  kern.ififo_xrcnt <> axiW.ififo_xrcnt
-  kern.ofifo_xrcnt <> axiW.ofifo_xrcnt
-  kern.ofifo_xwcnt <> axiW.ofifo_xwcnt
+  // Control register clock-domain crossing
+  core.ctl_wr_xdst <> axiW.ctl_wr_xsrc
+  core.ctl_ar_xdst <> axiW.ctl_ar_xsrc
+  core.ctl_rd_xsrc <> axiW.ctl_rd_xdst
+  // FIFO clock-domain crossing counters
+  core.ififo_xwcnt <> axiW.ififo_xwcnt
+  core.ififo_xrcnt <> axiW.ififo_xrcnt
+  core.ofifo_xrcnt <> axiW.ofifo_xrcnt
+  core.ofifo_xwcnt <> axiW.ofifo_xwcnt
 
   // XDMA wiring
   // SYS
   xdma.io.sys_clk_gt  := sys_clk_gt
   xdma.io.sys_clk     := sys_clk
   xdma.io.sys_rst_n   := sys_rst_n_c
-  xdma.io.m_axi       <> axiW.s_axi
   // AXI clock / reset
   axi_aclk            := xdma.io.axi_aclk
   axi_aresetn         := xdma.io.axi_aresetn
   // AXI wrapper
   axiW.axi_aclk       := axi_aclk
   axiW.axi_arstn      := axi_aresetn
+  // Data buses
+  xdma.io.m_axil      <> axiW.s_axil
+  xdma.io.m_axi       <> axiW.s_axi
   // PCIe
   xdma.io.pci_exp_rxn := pci_exp_rxn
   xdma.io.pci_exp_rxp := pci_exp_rxp
@@ -124,8 +134,8 @@ class Top(
   /* FIFO MEMORY LOGIC */
   // Output FIFO
   // Write
-  when(kern.ofifo_wmem.i_we) {
-    oFifoMem.write(kern.ofifo_wmem.i_addr, kern.ofifo_wmem.i_data, coreclk_bufed)
+  when(core.ofifo_wmem.i_we) {
+    oFifoMem.write(core.ofifo_wmem.i_addr, core.ofifo_wmem.i_data, coreclk_bufed)
   }
   // Read
   axiW.ofifo_rmem.o_data := oFifoMem.read(
@@ -139,7 +149,7 @@ class Top(
     iFifoMem.write(axiW.ififo_wmem.i_addr, axiW.ififo_wmem.i_data, axi_aclk)
   }
   // Read
-  kern.ififo_rmem.o_data := iFifoMem.read(
-    kern.ififo_rmem.i_addr, kern.ififo_rmem.i_en, coreclk_bufed
+  core.ififo_rmem.o_data := iFifoMem.read(
+    core.ififo_rmem.i_addr, core.ififo_rmem.i_en, coreclk_bufed
   )
 }

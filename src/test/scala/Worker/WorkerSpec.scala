@@ -27,9 +27,9 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
 
   "Worker" should "work_lol" in {
     simulate(new Worker(
-      M_HEIGHT = MH,
-      M_WIDTH  = MW,
-      USE_HARDFLOAT = USE_HARDFLOAT
+      PARAM = new Parameters(
+        Array("-h", s"${MH}", "-w", s"${MW}", "-hf", s"${USE_HARDFLOAT}")
+      )
     )) { uut =>
       uut.reset.poke(true)
       uut.clock.step(3)

@@ -5,10 +5,10 @@ import chisel3._
 import chisel3.util._
 
 // Local
-import sim.utils.WrAddrData
-import sim.utils.BasicRegInterface
-import sim.cross.mcp._
-import sim.cross.mcp.interfaces._
+import matmul.utils.WrAddrData
+import matmul.utils.BasicRegInterface
+import mcp._
+import mcp.interfaces._
 
 class MCPCross2RegAdapter(
   AW : Int,

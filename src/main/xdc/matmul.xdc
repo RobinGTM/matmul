@@ -73,21 +73,48 @@
 ##
 #############################################################################################################
 create_clock -period 10.000 -name sys_clk [get_ports sys_clk_p]
-create_clock -period 6.4000 -name coreclk_ref [get_pins coreClkIBufDS/O]
+create_clock -period 6.400 -name sim_ref_clk [get_ports coreclk_ref_p]
 # SIM clock
-create_generated_clock -name coreclk -source [get_pins coreClkPll/CLKIN] \
-    [get_pins coreClkPll/CLKOUT0]
-#create_generated_clock -name sim_clk  \
-#    -source [get_pins simClkIBufDS/O] \
-#    [get_pins simClkBufG/O]
+create_generated_clock -name coreclk \
+    -source [get_pins coreClkPll/CLKIN] [get_pins coreClkPll/CLKOUT0]
+#create_generated_clock -name sim_clk #    -source [get_pins simClkIBufDS/O] #    [get_pins simClkBufG/O]
 # Declare asynchronous clock groups
 set_clock_groups -asynchronous \
-    -group [get_clocks coreclk_ref] \
+    -group [get_clocks coreclk] \
     -group [get_clocks _xdma_axi_aclk]
-#set_clock_groups -asynchronous  \
-#    -group [get_clocks sim_clk] \
-#    -group [get_clocks _xdma_axi_aclk]
+set_clock_groups -asynchronous \
+    -group [get_clocks _xdma_axi_aclk] \
+    -group [get_clocks coreclk]
+#set_clock_groups -asynchronous #    -group [get_clocks sim_clk] #    -group [get_clocks _xdma_axi_aclk]
 #
+#############################################################################################################
+# False paths for clock domain crossing
+set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/arMcpSrc/ackSyncFF1_reg]
+set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/arMcpSrc/ackSyncFF2_reg]
+set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/wrMcpSrc/ackSyncFF1_reg]
+set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/wrMcpSrc/ackSyncFF2_reg]
+set_property ASYNC_REG true [get_cells axiW/iFifoWrPort/rCntMcpDst/loadSyncFF1_reg]
+set_property ASYNC_REG true [get_cells axiW/iFifoWrPort/rCntMcpDst/loadSyncFF2_reg]
+set_property ASYNC_REG true [get_cells axiW/iFifoWrPort/wCntMcpSrc/ackSyncFF1_reg]
+set_property ASYNC_REG true [get_cells axiW/iFifoWrPort/wCntMcpSrc/ackSyncFF2_reg]
+set_property ASYNC_REG true [get_cells axiW/oFifoRdPort/wCntMcpDst/loadSyncFF1_reg]
+set_property ASYNC_REG true [get_cells axiW/oFifoRdPort/wCntMcpDst/loadSyncFF2_reg]
+set_property ASYNC_REG true [get_cells axiW/oFifoRdPort/rCntMcpSrc/ackSyncFF1_reg]
+set_property ASYNC_REG true [get_cells axiW/oFifoRdPort/rCntMcpSrc/ackSyncFF2_reg]
+set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/rdMcpDst/loadSyncFF1_reg]
+set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/rdMcpDst/loadSyncFF2_reg]
+set_property ASYNC_REG true [get_cells core/oFifoWrPort/rCntMcpDst/loadSyncFF1_reg]
+set_property ASYNC_REG true [get_cells core/oFifoWrPort/rCntMcpDst/loadSyncFF2_reg]
+set_property ASYNC_REG true [get_cells core/iFifoRdPort/rCntMcpSrc/ackSyncFF1_reg]
+set_property ASYNC_REG true [get_cells core/iFifoRdPort/rCntMcpSrc/ackSyncFF2_reg]
+set_property ASYNC_REG true [get_cells core/mcpAdapter/wrMcpDst/loadSyncFF1_reg]
+set_property ASYNC_REG true [get_cells core/mcpAdapter/wrMcpDst/loadSyncFF2_reg]
+set_property ASYNC_REG true [get_cells core/oFifoWrPort/wCntMcpSrc/ackSyncFF1_reg]
+set_property ASYNC_REG true [get_cells core/oFifoWrPort/wCntMcpSrc/ackSyncFF2_reg]
+set_property ASYNC_REG true [get_cells core/iFifoRdPort/wCntMcpDst/loadSyncFF1_reg]
+set_property ASYNC_REG true [get_cells core/iFifoRdPort/wCntMcpDst/loadSyncFF2_reg]
+set_property ASYNC_REG true [get_cells core/mcpAdapter/arMcpDst/loadSyncFF1_reg]
+set_property ASYNC_REG true [get_cells core/mcpAdapter/arMcpDst/loadSyncFF2_reg]
 #############################################################################################################
 set_false_path -from [get_ports sys_rst_n]
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets sysRstIBuf/O]
@@ -101,8 +128,7 @@ set_property CONFIG_VOLTAGE 1.8 [current_design]
 #############################################################################################################
 set_property PACKAGE_PIN AM10 [get_ports sys_clk_n]
 set_property PACKAGE_PIN AM11 [get_ports sys_clk_p]
-set_property -dict { IOSTANDARD LVDS PACKAGE_PIN AV19 } [get_ports coreclk_n]
-set_property -dict { IOSTANDARD LVDS PACKAGE_PIN AU19 } [get_ports coreclk_p]
+set_property -dict {IOSTANDARD LVDS PACKAGE_PIN AV19} [get_ports coreclk_ref_n]
+set_property -dict {IOSTANDARD LVDS PACKAGE_PIN AU19} [get_ports coreclk_ref_p]
 #
 #############################################################################################################
-
