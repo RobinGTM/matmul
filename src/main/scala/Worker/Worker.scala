@@ -27,13 +27,6 @@ class Worker(
   /* INTERNALS */
   // Input buffer
   val iReg    = RegNext(i)
-  // Multiplicator-adder pipeline register
-  val macReg  = if(PARAM.USE_HARDFLOAT) {
-    // When using hardfloat, store recFNs, which are 1 bit wider
-    RegInit(0.U((DW + 1).W))
-  } else {
-    RegInit(0.U((DW).W))
-  }
   // Accumulator
   val accReg  = if(PARAM.USE_HARDFLOAT) {
     // When using hardfloat, store recFNs, which are 1 bit wider
@@ -182,6 +175,7 @@ class Worker(
     hardMul.io.a := recFNFromFN(8, 24, coeff)
     hardMul.io.b := recFNFromFN(8, 24, iReg.data)
     // MAC pipeline
+    val macReg = RegInit(0.U((DW + 1).W))
     macReg := hardMul.io.out
     // Adder
     hardAdder.io.a := macReg
@@ -197,10 +191,9 @@ class Worker(
     // Multiplier wiring
     safMul.i_safA := coeff
     safMul.i_safB := iReg.data
-    // MAC pipeline
-    macReg := safMul.o_res
+    // MAC pipeline - SAFMul is pipelined internally
     // Adder wiring
-    safAdder.i_safA := macReg
+    safAdder.i_safA := safMul.o_res
     safAdder.i_safB := accReg
     when(RegNext(RegNext(iDoAcc))) {
       accReg := safAdder.o_res

@@ -3,8 +3,6 @@ package saf
 import chisel3._
 import chisel3.util._
 
-import math.pow
-
 // Outputs a + b in SAF
 class SAFAdder(
   L   : Int = 5,

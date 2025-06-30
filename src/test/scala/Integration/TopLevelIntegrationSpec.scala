@@ -93,7 +93,7 @@ class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
   val clkDiv  = 3
   val MH = 16
   val MW = 16
-  val USE_HARDFLOAT = true
+  val USE_HARDFLOAT = false
   val file = "src/test/resources/dummy16-matrix.txt"
 
   "TopLevelIntegration" should "work" in {
