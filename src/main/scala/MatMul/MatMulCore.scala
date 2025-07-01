@@ -16,8 +16,8 @@ class MatMulCore(
 
   /* STATE */
   val readyReg = RegInit(true.B)
-  // Worker counter
-  val wCntReg  = RegInit(0.U(PARAM.M_HEIGHT.W))
+  // Input counter
+  val iCntReg  = RegInit(0.U(PARAM.M_HEIGHT.W))
 
   /* WORKER UNITS */
   val workers = for(w <- 0 to PARAM.M_HEIGHT - 1) yield {
@@ -51,16 +51,16 @@ class MatMulCore(
   /* COUNTER AND READY LOGIC */
   when(i.valid & ~i.prog) {
     // Count input data until last vector coeff
-    wCntReg := wCntReg + 1.U
-    when(wCntReg === (PARAM.M_HEIGHT - 1).U) {
-      wCntReg  := 0.U
+    iCntReg := iCntReg + 1.U
+    when(iCntReg === (PARAM.M_WIDTH - 1).U) {
+      iCntReg  := 0.U
       readyReg := false.B
     }
   } .elsewhen(workers(PARAM.M_HEIGHT - 1).o.valid) {
     // Count output data until last result coeff
-    wCntReg := wCntReg + 1.U
-    when(wCntReg === (PARAM.M_HEIGHT - 1).U) {
-      wCntReg  := 0.U
+    iCntReg := iCntReg + 1.U
+    when(iCntReg === (PARAM.M_HEIGHT - 1).U) {
+      iCntReg  := 0.U
       readyReg := true.B
     }
   }

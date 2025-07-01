@@ -57,12 +57,6 @@ class Worker(
   // ready for next tick, to be passed into the MAC
   val coeff   = Wire(UInt(DW.W))
   coeff      := wkMem.read(mPtrReg, iDoAcc)
-  dontTouch(coeff)
-
-  val wCntRegNext = RegNext(wCntReg)
-  val mPtrRegNext = RegNext(mPtrReg)
-  dontTouch(wCntRegNext)
-  dontTouch(mPtrRegNext)
 
   /* STATE LOGIC */
   // When data comes in with valid & prog set, program memory with the
@@ -113,16 +107,11 @@ class Worker(
   }
 
   // Output logic
-  val wCntRegNextNext = RegNext(RegNext(wCntReg))
-  val mPtrRegNextNext = RegNext(RegNext(mPtrReg))
-  dontTouch(wCntRegNextNext)
-  dontTouch(mPtrRegNextNext)
-
   val sendAcc = (
     RegNext(RegNext(wCntReg)) === wid &
     RegNext(
       oReg.valid & ~oReg.prog &
-      (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (PARAM.M_HEIGHT - 1).U))
+      (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (PARAM.M_WIDTH - 1).U))
     )
   )
 

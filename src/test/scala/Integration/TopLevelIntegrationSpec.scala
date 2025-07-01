@@ -92,7 +92,7 @@ class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
   // Divisor value for fake clk divisor
   val clkDiv  = 3
   val MH = 16
-  val MW = 16
+  val MW = 32
   val USE_HARDFLOAT = false
   val file = "src/test/resources/dummy16-matrix.txt"
 
@@ -268,7 +268,7 @@ class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
       //   }
       // ).toList
       val coeffs = (for(i <- 0 to MH * MW - 1) yield {
-        print(s"${i} ")
+        // print(s"${i} ")
         floatToBitsUInt(i.toFloat)
       }).toList
       println(coeffs)
@@ -276,7 +276,7 @@ class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
 
       // Send vector
       val vec = (for(i <- 0 to MW - 1) yield {
-        print(s"${(i + 1) % 2} ")
+        // print(s"${(i + 1) % 2} ")
         floatToBitsUInt(((i + 1) % 2).toFloat)
       }).toList
       println(vec)
@@ -284,7 +284,7 @@ class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
 
       stepSlow(256)
 
-      read_axi(333, 16)
+      read_axi(333, MH)
 
       stepSlow(10)
 
@@ -295,7 +295,8 @@ class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
           i <- 0 to MH - 1;
           j <- MW - 1 to 0 by -1
         ) yield {
-          matrix(i)(j).U
+          floatToBitsUInt((i * 255 + j).toFloat)
+          // matrix(i)(j).U
         }
       ).toList
       write_axi(444, coeffs2)
@@ -306,9 +307,9 @@ class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
       }).toList
       write_axi(555, vec2)
 
-      stepSlow(256)
+      stepSlow(2 * MH * MW)
 
-      read_axi(666, 16)
+      read_axi(666, MH)
 
       stepSlow(10)
     }
