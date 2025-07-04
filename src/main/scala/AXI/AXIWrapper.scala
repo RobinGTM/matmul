@@ -13,11 +13,12 @@ import axi.interfaces._
 import matmul.utils._
 
 class AXIWrapper(
-  FIFO_CNT_W : Int,
-  CTL_AW     : Int = 32,
-  CTL_W      : Int = 32,
-  AXI_AW     : Int = 64,
-  AXI_W      : Int = 64,
+  IFIFO_CNT_W : Int,
+  OFIFO_CNT_W : Int,
+  CTL_AW      : Int = 32,
+  CTL_W       : Int = 32,
+  AXI_AW      : Int = 64,
+  AXI_W       : Int = 64,
 ) extends RawModule {
   /* I/O */
   val axi_aclk  = IO(Input(Clock()))
@@ -34,16 +35,16 @@ class AXIWrapper(
   val ctl_rd_xdst = IO(Flipped(new MCPCrossSrc2DstInterface(UInt(CTL_W.W))))
 
   // Clock domain crossing interfaces
-  val ififo_xwcnt = IO(new MCPCrossSrc2DstInterface(UInt((FIFO_CNT_W + 1).W)))
-  val ififo_xrcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((FIFO_CNT_W + 1).W))))
+  val ififo_xwcnt = IO(new MCPCrossSrc2DstInterface(UInt((IFIFO_CNT_W + 1).W)))
+  val ififo_xrcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((IFIFO_CNT_W + 1).W))))
   // Write memory interface
-  val ififo_wmem  = IO(new BasicMemWriteInterface(FIFO_CNT_W, UInt(32.W)))
+  val ififo_wmem  = IO(new BasicMemWriteInterface(IFIFO_CNT_W, UInt(32.W)))
 
   // Output FIFO crossing / mem signals
-  val ofifo_xwcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((FIFO_CNT_W + 1).W))))
-  val ofifo_xrcnt = IO(new MCPCrossSrc2DstInterface(UInt((FIFO_CNT_W + 1).W)))
+  val ofifo_xwcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((OFIFO_CNT_W + 1).W))))
+  val ofifo_xrcnt = IO(new MCPCrossSrc2DstInterface(UInt((OFIFO_CNT_W + 1).W)))
   // Read memory interface
-  val ofifo_rmem  = IO(new BasicMemReadInterface(FIFO_CNT_W, UInt(32.W)))
+  val ofifo_rmem  = IO(new BasicMemReadInterface(OFIFO_CNT_W, UInt(32.W)))
 
   withClockAndReset(axi_aclk, ~axi_arstn) {
     /* MODULES */
@@ -59,10 +60,10 @@ class AXIWrapper(
 
     // Input FIFO write port
     val iAxiMm2Fifo = Module(new AXIMemory2FIFO(AXI_AW, AXI_W))
-    val iFifoWrPort = Module(new AsyncFIFOWritePort(FIFO_CNT_W, UInt(32.W)))
+    val iFifoWrPort = Module(new AsyncFIFOWritePort(IFIFO_CNT_W, UInt(32.W)))
 
     // Output FIFO read port
-    val oFifoRdPort = Module(new AsyncFIFOReadPort(FIFO_CNT_W, UInt(32.W)))
+    val oFifoRdPort = Module(new AsyncFIFOReadPort(OFIFO_CNT_W, UInt(32.W)))
     val oFifo2AxiMm = Module(new FIFO2AXIMemory(AXI_AW, AXI_W))
 
     /* WIRING */

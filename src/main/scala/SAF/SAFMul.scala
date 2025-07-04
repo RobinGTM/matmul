@@ -48,15 +48,12 @@ class SAFMul(
     1.U + ~maB,
     maB
   )
-  private val PROD_UMA_W = 2 * W + L
-  val prodUMa = Wire(UInt(PROD_UMA_W.W))
-  // Shift product to compensate for exponent reduction
-  prodUMa := (m1 * m2) << resSh
 
   //// PIPELINE ////
-  // Hopefully this will help using the DSP's MREG registers
+  private val PROD_UMA_W = 2 * W + L
   val pipeProdUMaReg = RegInit(0.U(PROD_UMA_W.W))
-  pipeProdUMaReg    := prodUMa
+  // Shift product to compensate for exponent reduction
+  pipeProdUMaReg := (m1 * m2) << resSh
   val pipeProdReReg  = RegNext(prodRe)
   //// PIPELINE ////
 

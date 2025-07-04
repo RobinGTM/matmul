@@ -3,6 +3,8 @@ package matmul
 import chisel3._
 import chisel3.util._
 
+import math.pow
+
 import java.lang.Float.floatToIntBits
 
 package object utils {
@@ -149,8 +151,8 @@ package object utils {
     val BASE_CLK = parseOpt("BASE_CLK", "fbase", 156.25)
 
     // Core clock PLL
-    val PLL_MULT        = parseOpt("PLL_MULT", "xpll", 9)
-    val PLL_DIV         = parseOpt("PLL_DIV", "dpll", 4)
+    val PLL_MULT = parseOpt("PLL_MULT", "xpll", 9)
+    val PLL_DIV  = parseOpt("PLL_DIV", "dpll", 4)
 
     // Matrix width (number of workers)
     val M_WIDTH  = parseOpt("M_WIDTH", "w", 16)
@@ -186,9 +188,12 @@ package object utils {
     // AXI buses
     val AXI_W  = parseOpt("AXI_W", "aw", 64)
     val AXI_AW = parseOpt("AXI_AW", "aaw", 64)
-    // Leave some room
-    val FIFO_DEPTH = 4 * M_HEIGHT
-    val FIFO_CNT_W = log2Up(FIFO_DEPTH)
+    // Leave some room and ensure FIFOs are a power of 2-deep
+    val OFIFO_DEPTH = pow(2, log2Up(4 * M_HEIGHT)).toInt
+    val OFIFO_CNT_W = log2Up(OFIFO_DEPTH)
+    // Input FIFO is bigger
+    val IFIFO_DEPTH = pow(2, log2Up(M_HEIGHT * M_WIDTH)).toInt
+    val IFIFO_CNT_W = log2Up(IFIFO_DEPTH)
 
     val DW = if(USE_HARDFLOAT) { 32 } else { SAF_WIDTH }
 

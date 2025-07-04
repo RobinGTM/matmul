@@ -96,6 +96,9 @@ class Worker(
       // When receiving valid data that is not prog nor write,
       // accumulate and count inputs
       mPtrReg := mPtrReg + 1.U
+      when(mPtrReg === (PARAM.M_WIDTH - 1).U) {
+        mPtrReg := 0.U
+      }
     }
   }
 

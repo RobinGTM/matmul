@@ -27,5 +27,7 @@ object Main {
     slrCstr.create(hwDir)
 
     // TODO gen host header
+
+    println("Outputs were written to " + param.OUTDIR)
   }
 }

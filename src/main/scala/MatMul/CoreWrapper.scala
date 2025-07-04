@@ -36,17 +36,17 @@ class CoreWrapper(
 
   // Clock-domain crossing interfaces (FIFO pointers)
   // Input FIFO write counter
-  val ififo_xwcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((PARAM.FIFO_CNT_W + 1).W))))
+  val ififo_xwcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((PARAM.IFIFO_CNT_W + 1).W))))
   // Input FIFO read counter
-  val ififo_xrcnt = IO(new MCPCrossSrc2DstInterface(UInt((PARAM.FIFO_CNT_W + 1).W)))
+  val ififo_xrcnt = IO(new MCPCrossSrc2DstInterface(UInt((PARAM.IFIFO_CNT_W + 1).W)))
   // Output FIFO write counter
-  val ofifo_xwcnt = IO(new MCPCrossSrc2DstInterface(UInt((PARAM.FIFO_CNT_W + 1).W)))
+  val ofifo_xwcnt = IO(new MCPCrossSrc2DstInterface(UInt((PARAM.OFIFO_CNT_W + 1).W)))
   // Output FIFO read counter
-  val ofifo_xrcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((PARAM.FIFO_CNT_W + 1).W))))
+  val ofifo_xrcnt = IO(Flipped(new MCPCrossSrc2DstInterface(UInt((PARAM.OFIFO_CNT_W + 1).W))))
   // FIFO memory interfaces
   // FIFO memories contain float32
-  val ififo_rmem  = IO(new BasicMemReadInterface(PARAM.FIFO_CNT_W, UInt(32.W)))
-  val ofifo_wmem  = IO(new BasicMemWriteInterface(PARAM.FIFO_CNT_W, UInt(32.W)))
+  val ififo_rmem  = IO(new BasicMemReadInterface(PARAM.IFIFO_CNT_W, UInt(32.W)))
+  val ofifo_wmem  = IO(new BasicMemWriteInterface(PARAM.OFIFO_CNT_W, UInt(32.W)))
 
   /* RESET SYNCHRONIZER */
   // Reset is synchronized since it comes from a different clock domain
@@ -58,7 +58,7 @@ class CoreWrapper(
     // MCP adapter for control register
     val mcpAdapter  = Module(new MCPCross2RegAdapter(PARAM.CTL_AW, PARAM.CTL_W))
     // Input FIFO read port
-    val iFifoRdPort = Module(new AsyncFIFOReadPort(PARAM.FIFO_CNT_W, UInt(32.W)))
+    val iFifoRdPort = Module(new AsyncFIFOReadPort(PARAM.IFIFO_CNT_W, UInt(32.W)))
     // Input FIFO to AXI-Stream adapter
     val iFifo2AxiS  = Module(new FIFO2AXIS(32))
     // Matrix multiplier core and controller
@@ -66,7 +66,7 @@ class CoreWrapper(
     // Output AXI-Stream to FIFO adapter
     val oAxiS2Fifo  = Module(new AXIS2FIFO(32))
     // Output FIFO write port
-    val oFifoWrPort = Module(new AsyncFIFOWritePort(PARAM.FIFO_CNT_W, UInt(32.W)))
+    val oFifoWrPort = Module(new AsyncFIFOWritePort(PARAM.OFIFO_CNT_W, UInt(32.W)))
 
     /* WIRING */
     // Clock-domain crossing
