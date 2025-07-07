@@ -1,0 +1,75 @@
+M_HEIGHT        = 16
+M_WIDTH         = 16
+FLOAT           = saf
+SBT_MEM         = 65535
+PLL_MULT        = 6
+PLL_DIV         = 6
+BASE_FREQ       = 156.25
+CORE_FREQ      := '$(BASE_FREQ) * $(PLL_MULT) / $(PLL_DIV)'
+CHISEL_OUTDIR   = matmul-$(M_WIDTH)x$(M_HEIGHT)_$(FLOAT)-$(shell \
+                    echo $(CORE_FREQ) | bc \
+                  )MHz
+CC              = gcc
+CSRCDIR         = src/main/c/src
+CINCDIR         = src/main/c/inc
+BUILDDIR        = build
+BUILDDIR_ABS    = $(PWD)/$(BUILDDIR)
+OBJDIR         := $(BUILDDIR)/objs
+CFLAGS          = -O2 -g -Wall
+CLIBFLAGS       = -lm
+# Includes .../host to get hardware.h
+CINCFLAGS       = -I$(CINCDIR) -I$(BUILDDIR)/$(CHISEL_OUTDIR)/sw
+
+EXE_NAME        = matmul-$(M_WIDTH)x$(M_HEIGHT)_$(FLOAT)-host
+
+# objs := gc.o mapper.o parser.o sim.o postprocessing.o
+
+default: all
+
+help:
+	@echo "\`make host\` or \`make all\` build the \
+	chisel project and the associated host code."
+	@echo "Use M_WIDHT and M_HEIGHT to define \
+	the machine's size."
+	@echo "Set FLOAT to \`hardfloat\` to use Berkeley's hardfloat \
+	floating point implementation. Default is \`saf\`."
+	@echo "Use BASE_FREQ, PLL_MULT and PLL_DIV to define \
+	the core frequency (BASE_FREQ is fixed by hardware, core \
+	will run at BASE_FREQ * PLL_MULT / PLL_DIV)"
+
+base:
+	mkdir -p $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/{sw,hw}
+
+hw: base
+	sbt -mem $(SBT_MEM) \
+	  "run -w $(M_WIDTH) -h $(M_HEIGHT) \
+	   -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
+	   -fbase $(BASE_FREQ) \
+	   -o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
+	   $(shell [ "$(FLOAT)" == "hardfloat" ] && echo '-hf') \
+	  "
+
+# hardware.h: SIM_XDMA.sv
+# 	ln -sfv $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/hardware.h $(CINCDIR)/hardware.h
+
+# $(objs): base
+# 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) -c -o $(OBJDIR)/$@ $(CSRCDIR)/$(@:%.o=%.c)
+
+host: base
+	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) \
+	-o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/sw/$(EXE_NAME) \
+	$(CSRCDIR)/main.c
+
+all: hw host
+	@echo "[MatMul done!]"
+	@echo "Outputs were written to $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)"
+
+.PHONY: clean
+clean:
+	rm -rf $(BUILDDIR_ABS)
+
+.PHONY: distclean
+distclean: clean
+	find . -name '*.o' -delete
+#	rm -rf project
+#	rm -rf target

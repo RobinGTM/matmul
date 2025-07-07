@@ -9,6 +9,7 @@ object Main {
   def main(args : Array[String]) : Unit = {
     val param = new Parameters(args)
     val hwDir = param.OUTDIR + java.io.File.separator + "hw"
+    val swDir = param.OUTDIR + java.io.File.separator + "sw"
 
     ChiselStage.emitSystemVerilogFile(
       new TopLevel(PARAM = param),
@@ -26,7 +27,9 @@ object Main {
     val slrCstr = new SLRConstraints(param, "u200")
     slrCstr.create(hwDir)
 
-    // TODO gen host header
+    // Generate header for software part
+    val drvDefs = new DriverDefsHeader(param)
+    drvDefs.create(swDir)
 
     println("Outputs were written to " + param.OUTDIR)
   }
