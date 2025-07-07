@@ -9,3 +9,5 @@ vivado/*
 xdma_0_ex.gen/*
 *.log
 *.jou
+!src/main/c/inc
+!src/main/c/src
