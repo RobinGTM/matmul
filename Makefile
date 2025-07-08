@@ -1,3 +1,4 @@
+SHELL           = /bin/bash
 M_HEIGHT        = 16
 M_WIDTH         = 16
 FLOAT           = saf
@@ -46,7 +47,7 @@ hw: base
 	   -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
 	   -fbase $(BASE_FREQ) \
 	   -o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
-	   $(shell [ "$(FLOAT)" == "hardfloat" ] && echo '-hf') \
+	   $(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf') \
 	  "
 
 # hardware.h: SIM_XDMA.sv
