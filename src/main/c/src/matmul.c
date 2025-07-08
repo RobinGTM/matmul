@@ -146,6 +146,7 @@ int read(const matmul_t * matmul, gsl_vector_float * vec_out)
     return -1;
   }
 
+  // Read output into vector
   float curr;
   for (int i = 0; i < M_HEIGHT; i++)
   {
