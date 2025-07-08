@@ -23,7 +23,7 @@ CINCFLAGS       = -I$(CINCDIR) -I$(BUILDDIR)/$(CHISEL_OUTDIR)/sw
 
 EXE_NAME        = matmul-$(M_WIDTH)x$(M_HEIGHT)_$(FLOAT)-host
 
-# objs := gc.o mapper.o parser.o sim.o postprocessing.o
+objs := matmul.o matvec.o
 
 default: all
 
@@ -40,6 +40,7 @@ help:
 
 base:
 	mkdir -p $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/{sw,hw}
+	mkdir -p $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/objs
 
 hw: base
 	sbt -mem $(SBT_MEM) \
@@ -53,13 +54,13 @@ hw: base
 # hardware.h: SIM_XDMA.sv
 # 	ln -sfv $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/hardware.h $(CINCDIR)/hardware.h
 
-# $(objs): base
-# 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) -c -o $(OBJDIR)/$@ $(CSRCDIR)/$(@:%.o=%.c)
+$(objs): base
+	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) -c -o $(OBJDIR)/$@ $(CSRCDIR)/$(@:%.o=%.c)
 
 host: base
 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) \
 	-o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/sw/$(EXE_NAME) \
-	$(CSRCDIR)/main.c
+	$(OBJDIR)/*.o $(CSRCDIR)/main.c
 
 all: hw host
 	@echo "[MatMul done!]"
