@@ -12,3 +12,4 @@ xdma_0_ex.gen/*
 src/main/c/*
 !src/main/c/inc
 !src/main/c/src
+build/*
