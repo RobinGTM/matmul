@@ -157,3 +157,29 @@ int read(const matmul_t * matmul, gsl_vector_float * vec_out)
 
   return matmul->s_axil_ctl[CTL_REG];
 }
+
+int detach_matmul(matmul_t * matmul)
+{
+  if (!matmul)
+  {
+    dprintf(2, "matmul is not allocated.\n");
+    return -1;
+  }
+  if (matmul->s_axil_ctl)
+  {
+    if (munmap((void *)matmul->s_axil_ctl, MMAP_LEN) != 0)
+    {
+      dprintf(2, "munmap failed.\n");
+      return -EXIT_MMAPFAIL;
+    }
+  }
+  if (matmul->s_axi_h2c_fd > 0)
+  {
+    close(matmul->s_axi_h2c_fd);
+  }
+  if (matmul->s_axi_c2h_fd > 0)
+  {
+    close(matmul->s_axi_c2h_fd);
+  }
+  return 0;
+}

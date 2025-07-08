@@ -18,6 +18,8 @@ typedef struct matmul_struct
 
 // Attach XDMA driver devices to matmul struct
 int attach_matmul(matmul_t * matmul);
+// Attach XDMA driver devices to matmul struct
+int detach_matmul(matmul_t * matmul);
 // Program matrix to 
 int prog(const matmul_t * matmul, const gsl_matrix_float * mat);
 // Send input vector

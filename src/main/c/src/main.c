@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <time.h>
 
+#include "matmul.h"
+#include "matvec.h"
 #include "hardware.h"
 
 #define SOCK_H2C "/dev/xdma0_h2c_0"
@@ -15,6 +17,9 @@
 
 int main()
 {
+
+
+
   int axi_wr_fd = open(SOCK_H2C, O_WRONLY);
   printf("axi_wr_fd: %d\n", axi_wr_fd);
   int axi_rd_fd = open(SOCK_C2H, O_RDONLY);
