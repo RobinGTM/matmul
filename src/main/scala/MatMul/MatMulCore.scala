@@ -59,7 +59,7 @@ class MatMulCore(
   } .elsewhen(workers(PARAM.M_HEIGHT - 1).o.valid) {
     // Count output data until last result coeff
     iCntReg := iCntReg + 1.U
-    when(iCntReg === (PARAM.M_HEIGHT - 1).U) {
+    when(iCntReg === (PARAM.M_WIDTH - 1).U) {
       iCntReg  := 0.U
       readyReg := true.B
     }
