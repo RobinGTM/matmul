@@ -100,7 +100,7 @@ class TopLevel(
   val oFifoMem = SyncReadMem(PARAM.OFIFO_DEPTH, UInt(32.W))
 
   /* WIRING */
-  // Coreel wiring
+  // Coreclk wiring
   core.i_coreclk := coreclk_bufed
   core.i_arstn   := sys_rst_n_c
 
