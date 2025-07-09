@@ -1,4 +1,4 @@
-package cross.asyncfifo
+package asyncfifo
 
 // Chisel
 import chisel3._
@@ -13,9 +13,9 @@ import math.pow
 import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 // Local
-import cross.asyncfifo._
-import cross.asyncfifo.interfaces._
-import cross.mcp.interfaces._
+import asyncfifo._
+import asyncfifo.interfaces._
+import mcp.interfaces._
 
 // Fake read-side MCP
 class FakeReadSideReadSyncMCP {

@@ -1,4 +1,4 @@
-package cross.fifo
+package asyncfifo
 
 // Chisel
 import chisel3._
@@ -12,10 +12,10 @@ import org.scalatest.matchers.must.Matchers
 import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 // Local
-import cross.asyncfifo._
-import cross.asyncfifo.interfaces._
-import cross.mcp.interfaces._
-import sim.test.utils.FakeClockDivider
+import asyncfifo._
+import asyncfifo.interfaces._
+import mcp.interfaces._
+import matmul.testutils.FakeClockDivider
 
 class AsyncFIFOTestRdFasterSpec extends AnyFlatSpec with Matchers {
   val CNT_W = 8

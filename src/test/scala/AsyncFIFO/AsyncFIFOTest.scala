@@ -1,13 +1,13 @@
-package cross.asyncfifo
+package asyncfifo
 
 import chisel3._
 import chisel3.util._
 
 import math.pow
 
-import cross.mcp._
-import cross.mcp.interfaces._
-import cross.asyncfifo.interfaces._
+import mcp._
+import mcp.interfaces._
+import asyncfifo.interfaces._
 
 // Testing class for verilog async FIFO test-bench
 class AsyncFIFOTest[T <: Data](
