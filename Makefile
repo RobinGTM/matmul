@@ -7,7 +7,7 @@ PLL_MULT        = 6
 PLL_DIV         = 6
 BASE_FREQ       = 156.25
 CORE_FREQ      := '$(BASE_FREQ) * $(PLL_MULT) / $(PLL_DIV)'
-CHISEL_OUTDIR   = matmul-$(M_WIDTH)x$(M_HEIGHT)_$(FLOAT)-$(shell \
+CHISEL_OUTDIR   = matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT)-$(shell \
                     echo $(CORE_FREQ) | bc \
                   )MHz
 CC              = gcc
@@ -21,9 +21,9 @@ CLIBFLAGS       = -lgsl -lgslcblas
 # Includes .../host to get hardware.h
 CINCFLAGS       = -I$(CINCDIR) -I$(BUILDDIR)/$(CHISEL_OUTDIR)/sw
 
-EXE_NAME        = matmul-$(M_WIDTH)x$(M_HEIGHT)_$(FLOAT)-host
+EXE_NAME        = matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT)-host
 
-objs := matmul.o matvec.o
+objs := matmul.o matvec.o benchmark.o parser.o
 
 default: all
 
@@ -70,10 +70,11 @@ all: hw host
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILDDIR_ABS)
+	rm -rf $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)
 
 .PHONY: distclean
 distclean: clean
+	rm -rf $(BUILDDIR_ABS)
 	find . -name '*.o' -delete
 #	rm -rf project
 #	rm -rf target
