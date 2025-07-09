@@ -33,7 +33,7 @@ class MatMulCore(
   /* WIRING */
   // Input
   workers(0).i.data  := i.data
-  workers(0).i.valid := i.valid
+  workers(0).i.valid := i.valid & readyReg
   workers(0).i.prog  := i.prog
   // Worker 0 generates the WRITE command itself
   workers(0).i.write := false.B
@@ -51,7 +51,7 @@ class MatMulCore(
   o.prog  := false.B
 
   /* COUNTER AND READY LOGIC */
-  when(i.valid & ~i.prog) {
+  when(i.valid & readyReg & ~i.prog) {
     // Count input data until last vector coeff
     iCntReg := iCntReg + 1.U
     when(iCntReg === (PARAM.M_WIDTH - 1).U) {
