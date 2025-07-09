@@ -15,9 +15,9 @@ CSRCDIR         = src/main/c/src
 CINCDIR         = src/main/c/inc
 BUILDDIR        = build
 BUILDDIR_ABS    = $(PWD)/$(BUILDDIR)
-OBJDIR         := $(BUILDDIR)/objs
+OBJDIR         := $(BUILDDIR)/$(CHISEL_OUTDIR)/objs
 CFLAGS          = -O2 -g -Wall
-CLIBFLAGS       = -lm
+CLIBFLAGS       = -lgsl -lgslcblas
 # Includes .../host to get hardware.h
 CINCFLAGS       = -I$(CINCDIR) -I$(BUILDDIR)/$(CHISEL_OUTDIR)/sw
 
@@ -28,8 +28,10 @@ objs := matmul.o matvec.o
 default: all
 
 help:
-	@echo "\`make host\` or \`make all\` build the \
-	chisel project and the associated host code."
+	@echo "\`make host\` builds the host code."
+	@echo "\`make hw\` builds the Chisel project."
+	@echo "Use \`make all\` or \`make\` to build everything."
+	@echo
 	@echo "Use M_WIDHT and M_HEIGHT to define \
 	the machine's size."
 	@echo "Set FLOAT to \`hardfloat\` to use Berkeley's hardfloat \
@@ -40,7 +42,7 @@ help:
 
 base:
 	mkdir -p $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/{sw,hw}
-	mkdir -p $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/objs
+	mkdir -p $(OBJDIR)
 
 hw: base
 	sbt -mem $(SBT_MEM) \
@@ -57,7 +59,7 @@ hw: base
 $(objs): base
 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) -c -o $(OBJDIR)/$@ $(CSRCDIR)/$(@:%.o=%.c)
 
-host: base
+host: $(objs) base
 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) \
 	-o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/sw/$(EXE_NAME) \
 	$(OBJDIR)/*.o $(CSRCDIR)/main.c

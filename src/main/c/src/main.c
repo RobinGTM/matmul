@@ -1,11 +1,7 @@
-#include <sys/mman.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
-#include <fcntl.h>
 #include <time.h>
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
 
 #include "matmul.h"
 #include "matvec.h"
@@ -17,112 +13,73 @@
 
 int main()
 {
+  srand(time(NULL));
+  // srand(870833247);
+  int seed = rand();
+  dprintf(2, "Random seed: %d\n", seed);
+  srand(seed);
 
-
-
-  int axi_wr_fd = open(SOCK_H2C, O_WRONLY);
-  printf("axi_wr_fd: %d\n", axi_wr_fd);
-  int axi_rd_fd = open(SOCK_C2H, O_RDONLY);
-  printf("axi_rd_fd: %d\n", axi_rd_fd);
-  int ctl_fd = open(MM_CTL, O_RDWR);
-  if (ctl_fd < 0)
+  // Attach hardware
+  matmul_t matmul;
+  int ret;
+  ret = attach_matmul(&matmul);
+  if (ret < 0)
   {
-    dprintf(2, "Could not open %s (%d)\n", MM_CTL, ctl_fd);
+    return -ret;
   }
-  uint32_t * s_axil_ctl =
-    (uint32_t *)mmap(NULL, 64, PROT_READ | PROT_WRITE, MAP_SHARED, ctl_fd, 0);
-  close(ctl_fd);
-
-  uint32_t ctl;
-
-  printf("HxW = %dx%d\n", M_HEIGHT, M_WIDTH);
-  ctl = s_axil_ctl[0];
-  printf("CTL: 0x%x\n", ctl);
-
-  // Floats are 32-bit but AXI bus is 64-bit
-  uint64_t * coeffs = (uint64_t *)malloc(M_WIDTH * M_HEIGHT * sizeof(uint64_t));
-  printf("Matrix:\n");
-
-  // for (int i = 0; i < M_WIDTH; i++) {
-  //   for (int j = 0; j < M_HEIGHT; j++) {
-  //     if (i == 1)
-  //     {
-  //       float curr = (float)(1.0);
-  //       memcpy(&coeffs[j * M_HEIGHT + i], &curr, sizeof(curr));
-  //     }
-  //     else
-  //     {
-  //       continue;
-  //     }
-  //   }
-  // }
-  for (int i = 0; i < M_WIDTH * M_HEIGHT; i++)
+  else
   {
-    float curr = (float)((1));
-    memcpy(&coeffs[i], &curr, sizeof(curr));
-    printf("%.0f (0x%lx), ", curr, coeffs[i]);
-  }
-  printf("\n");
-
-  uint64_t * vec = (uint64_t *)malloc(M_WIDTH * sizeof(uint64_t));
-  printf("Vector:\n");
-  for (int i = 0; i < M_HEIGHT; i++)
-  {
-    float curr = (float)((i + 1) % 2);
-    memcpy(&vec[i], &curr, sizeof(curr));
-    printf("%.0f (0x%lx), ", curr, vec[i]);
-  }
-  printf("\n");
-
-  s_axil_ctl[0] = 0x1;
-  ctl = s_axil_ctl[0];
-  printf("CTL: 0x%x\n", ctl);
-
-  // Send coeffs
-  int written;
-  written = write(axi_wr_fd, coeffs, M_HEIGHT * M_WIDTH * sizeof(uint64_t));
-  printf("Wrote %d bytes from coeffs to axi_wr_fd\n", written);
-
-  ctl = s_axil_ctl[0];
-  printf("CTL: 0x%x\n", ctl);
-
-  // Send vector
-  written = write(axi_wr_fd, vec, M_HEIGHT * sizeof(uint64_t));
-  printf("Wrote %d bytes from vec to axi_wr_fd\n", written);
-  ctl = s_axil_ctl[0];
-  printf("CTL: 0x%x\n", ctl);
-
-  // ctl = s_axil_ctl[0];
-  // int cnt = 0;
-  // while ((ctl % 8) != 4)
-  // {
-  //   cnt += 1;
-  //   printf("CTL: 0x%x (%dx)\n", ctl, cnt);
-  //   sleep(1);
-  // }
-
-  uint64_t * out = (uint64_t *)malloc(M_HEIGHT * sizeof(uint64_t));
-  // Read result
-  int rdcnt = read(axi_rd_fd, out, M_HEIGHT * sizeof(*out));
-  printf("Read %d bytes from matmul\n", rdcnt);
-
-  float out_float[M_HEIGHT];
-  for (int i = 0; i < M_HEIGHT; i++)
-  {
-    memcpy(&(out_float[i]), (uint64_t *)&(out[i]), sizeof(*out_float));
+    dprintf(2, "CTL: 0x%x\n", ret);
   }
 
-  printf("-----------------------------------------\n");
+  // Create vectors
+  gsl_matrix_float * mat = gsl_matrix_float_alloc(M_HEIGHT, M_WIDTH);
+  gsl_vector_float * vec = gsl_vector_float_alloc(M_WIDTH);
+  gsl_vector_float * hw_result = gsl_vector_float_alloc(M_HEIGHT);
+  gsl_vector_float * sw_result = gsl_vector_float_alloc(M_HEIGHT);
 
-  for (int i = 0; i < M_HEIGHT; i++)
+  // Generate random mat and vec
+  ret = populate_randmat(mat);
+  if (ret < 0)
   {
-    printf("%.0f (0x%lx), ", out_float[i], out[i]);
+    return -ret;
   }
-  printf("\n");
+  ret = populate_randvec(vec);
+  if (ret < 0)
+  {
+    return -ret;
+  }
+  // gsl_matrix_float_fprintf(stdout, mat, "%f");
+  // printf("----------------------------------\n");
+  // gsl_vector_float_fprintf(stdout, vec, "%f");
+  // printf("----------------------------------\n");
 
-  free(coeffs);
-  free(vec);
-  free(out);
-  
+  // Compute hardware matrix multiplication, programming matrix coeffs
+  // into matmul
+  ret = hw_matmul(&matmul, hw_result, mat, vec, 1);
+  if (ret < 0)
+  {
+    return -ret;
+  }
+
+  // Compute software matrix multiplication (GSL-CBLAS)
+  ret = sw_matmul(sw_result, mat, vec);
+  if (ret < 0)
+  {
+    return -ret;
+  }
+
+  // Compare
+  float score;
+  ret = eucl_dist(&score, sw_result, hw_result);
+  if (ret != 0)
+  {
+    return -ret;
+  }
+  else
+  {
+    printf("Distance between HW and SW vectors: %.10f\n", score);
+  }
+
   return 0;
 }

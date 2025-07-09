@@ -1,4 +1,5 @@
 #include <sys/mman.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <gsl/gsl_matrix.h>
@@ -53,31 +54,33 @@ int prog(const matmul_t * matmul, const gsl_matrix_float * mat)
   if (mat->size1 != M_HEIGHT || mat->size2 != M_WIDTH)
   {
     dprintf(2, "%s: Cannot send matrix with invalid size!\n", __FUNCTION__);
-    dprintf(2, "(hardware is %dx%d while matrix is %dx%d)\n",
+    dprintf(2, "(hardware is %dx%d while matrix is %ldx%ld)\n",
             M_HEIGHT, M_WIDTH, mat->size1, mat->size2);
     return -1;
   }
   aximm_t * coeffs = (aximm_t *)malloc(sizeof(aximm_t) * M_HEIGHT * M_WIDTH);
   unsigned int idx = 0;
+  // Placeholder for matrix coeff
+  float curr;
   for (int i = 0; i < M_HEIGHT; i++)
   {
     for (int j = 0; j < M_WIDTH; j++)
     {
-      memcpy(&coeffs[idx++], &gsl_matrix_get(mat, i, j), sizeof(float));
+      curr = gsl_matrix_float_get(mat, i, j);
+      memcpy(&coeffs[idx++], &curr, sizeof(float));
     }
   }
-  s_axil_ctl[0] = CMD_PROG;
+  // Write PROG to control register
+  matmul->s_axil_ctl[CTL_REG] = CMD_PROG;
 
   //// DEBUG
-  for (int i = 0; i < M_HEIGHT * M_WIDTH; i++)
-  {
-    printf("%f\n", coeffs[i]);
-  }
-  //// END
+  dprintf(2, "%s: CTL after PROG command: 0x%08x\n",
+          __FUNCTION__, matmul->s_axil_ctl[CTL_REG]);
 
   // Write to XDMA host 2 card driver fd
   int written = write(matmul->s_axi_h2c_fd, coeffs, M_HEIGHT * M_WIDTH * sizeof(aximm_t));
 
+  // Cleanup
   free(coeffs);
 
   if (written < 0)
@@ -86,7 +89,7 @@ int prog(const matmul_t * matmul, const gsl_matrix_float * mat)
     return written;
   }
 
-  return s_axil_ctl[CTL_REG];
+  return matmul->s_axil_ctl[CTL_REG];
 }
 
 int send(const matmul_t * matmul, const gsl_vector_float * vec)
@@ -94,22 +97,18 @@ int send(const matmul_t * matmul, const gsl_vector_float * vec)
   if (vec->size != M_WIDTH)
   {
     dprintf(2, "%s: Cannot send vector with invalid size!\n", __FUNCTION__);
-    dprintf(2, "(hardware matrix width is %d while vector has %d coeffs)\n",
+    dprintf(2, "(hardware matrix width is %d while vector has %ld coeffs)\n",
             M_WIDTH, vec->size);
     return -1;
   }
   aximm_t * coeffs = (aximm_t *)malloc(sizeof(aximm_t) * M_WIDTH);
+  // Placeholder for vector coeff
+  float curr;
   for (int i = 0; i < M_WIDTH; i++)
   {
-    memcpy(&coeffs[i], &gsl_matrix_get(vec, i), sizeof(float));
+    curr = gsl_vector_float_get(vec, i);
+    memcpy(&coeffs[i], &curr, sizeof(float));
   }
-
-  //// DEBUG
-  for (int i = 0; i < M_WIDTH; i++)
-  {
-    printf("%f\n", coeffs[i]);
-  }
-  //// END
 
   // Send vector
   int written = write(matmul->s_axi_h2c_fd, coeffs, M_WIDTH * sizeof(aximm_t));
@@ -122,15 +121,15 @@ int send(const matmul_t * matmul, const gsl_vector_float * vec)
     return written;
   }
 
-  return s_axil_ctl[CTL_REG];
+  return matmul->s_axil_ctl[CTL_REG];
 }
 
-int read(const matmul_t * matmul, gsl_vector_float * vec_out)
+int recv(const matmul_t * matmul, gsl_vector_float * vec_out)
 {
   if (vec_out->size != M_HEIGHT)
   {
     dprintf(2, "%s: Cannot read into vector with invalid size!\n", __FUNCTION__);
-    dprintf(2, "(hardware matrix height is %d while vector has %d coeffs)\n",
+    dprintf(2, "(hardware matrix height is %d while vector has %ld coeffs)\n",
             M_HEIGHT, vec_out->size);
     return -1;
   }
@@ -170,7 +169,7 @@ int detach_matmul(matmul_t * matmul)
     if (munmap((void *)matmul->s_axil_ctl, MMAP_LEN) != 0)
     {
       dprintf(2, "munmap failed.\n");
-      return -EXIT_MMAPFAIL;
+      return -1;
     }
   }
   if (matmul->s_axi_h2c_fd > 0)
@@ -182,4 +181,32 @@ int detach_matmul(matmul_t * matmul)
     close(matmul->s_axi_c2h_fd);
   }
   return 0;
+}
+
+#define RUN_CHECK(funcall, status_placeholder)                          \
+  (status_placeholder) = funcall;                                       \
+  if ((status_placeholder) < 0)                                         \
+  {                                                                     \
+    dprintf(2, "%s: " #funcall " failed.\n", __FUNCTION__);             \
+    return (status_placeholder);                                        \
+  }                                                                     \
+  else                                                                  \
+    dprintf(2, "CTL after `" #funcall "`: 0x%08x\n", status_placeholder);
+
+int hw_matmul(const matmul_t * matmul, gsl_vector_float * vec_out,
+              const gsl_matrix_float * mat, const gsl_vector_float * vec,
+              int do_prog)
+{
+  int ret;
+
+  // Program matrix if asked so
+  if (do_prog == 1)
+  {
+    RUN_CHECK(prog(matmul, mat), ret);
+  }
+  // Send vector
+  RUN_CHECK(send(matmul, vec), ret);
+  // Read output
+  RUN_CHECK(recv(matmul, vec_out), ret);
+  return matmul->s_axil_ctl[CTL_REG];
 }

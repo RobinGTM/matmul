@@ -25,6 +25,11 @@ int prog(const matmul_t * matmul, const gsl_matrix_float * mat);
 // Send input vector
 int send(const matmul_t * matmul, const gsl_vector_float * vec);
 // Read output into vector
-int read(const matmul_t * matmul, gsl_vector_float * vec_out);
+int recv(const matmul_t * matmul, gsl_vector_float * vec_out);
+// Perform hardware matrix-vector-multiplication
+// If do_prog == 1, program matrix into matmul before multiplying
+int hw_matmul(const matmul_t * matmul, gsl_vector_float * vec_out,
+              const gsl_matrix_float * mat, const gsl_vector_float * vec,
+              int do_prog);
 
 #endif /* __MATMUL_H__ */
