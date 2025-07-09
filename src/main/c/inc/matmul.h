@@ -6,6 +6,9 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_vector.h>
 
+#define MATMUL_PROG   1
+#define MATMUL_NOPROG 0
+
 typedef uint64_t aximm_t;
 typedef uint32_t axilctl_t;
 

@@ -124,7 +124,8 @@ int sw_matmul(gsl_vector_float * out,
   }
   else
   {
-    int ret = gsl_blas_sgemv(CblasNoTrans, 1.0f, mat, vec, 1.0, out);
+    // BLAS sgemv computes y = α op(A)x + βy
+    int ret = gsl_blas_sgemv(CblasNoTrans, 1.0f, mat, vec, 0.0, out);
     return ret;
   }
 }

@@ -191,7 +191,10 @@ int detach_matmul(matmul_t * matmul)
     return (status_placeholder);                                        \
   }                                                                     \
   else                                                                  \
-    dprintf(2, "CTL after `" #funcall "`: 0x%08x\n", status_placeholder);
+  {                                                                     \
+    dprintf(2, "%s: CTL after `" #funcall "`: 0x%08x\n",                \
+            __FUNCTION__, status_placeholder);                          \
+  }
 
 int hw_matmul(const matmul_t * matmul, gsl_vector_float * vec_out,
               const gsl_matrix_float * mat, const gsl_vector_float * vec,

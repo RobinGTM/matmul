@@ -3,21 +3,38 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 
-#include "matmul.h"
+#include "parser.h"
+#include "benchmark.h"
 #include "matvec.h"
+#include "matmul.h"
 #include "hardware.h"
 
 #define SOCK_H2C "/dev/xdma0_h2c_0"
 #define SOCK_C2H "/dev/xdma0_c2h_0"
 #define MM_CTL   "/dev/xdma0_user"
 
-int main()
+int main(int argc, char ** argv)
 {
-  srand(time(NULL));
-  // srand(870833247);
-  int seed = rand();
-  dprintf(2, "Random seed: %d\n", seed);
-  srand(seed);
+  benchinfo_t bench_info;
+  parser_exit_t parser_ret = parse_args(argc, argv, &bench_info);
+  if (parser_ret == EXIT_HELP || argc == 0)
+  {
+    print_usage(argv[0]);
+    return 0;
+  }
+  else if (parser_ret == EXIT_HW)
+  {
+    print_hw();
+    return 0;
+  }
+  else if (parser_ret != 0)
+  {
+    dprintf(2, "Parser error.\n");
+    return parser_ret;
+  }
+
+  // print_benchinfo(&bench_info);
+  // return 0;
 
   // Attach hardware
   matmul_t matmul;
@@ -32,54 +49,24 @@ int main()
     dprintf(2, "CTL: 0x%x\n", ret);
   }
 
-  // Create vectors
-  gsl_matrix_float * mat = gsl_matrix_float_alloc(M_HEIGHT, M_WIDTH);
-  gsl_vector_float * vec = gsl_vector_float_alloc(M_WIDTH);
-  gsl_vector_float * hw_result = gsl_vector_float_alloc(M_HEIGHT);
-  gsl_vector_float * sw_result = gsl_vector_float_alloc(M_HEIGHT);
-
-  // Generate random mat and vec
-  ret = populate_randmat(mat);
-  if (ret < 0)
+  // Do benchmark
+  int bench_ret = do_benchmark(&matmul, &bench_info);
+  if (bench_ret != 0)
   {
-    return -ret;
-  }
-  ret = populate_randvec(vec);
-  if (ret < 0)
-  {
-    return -ret;
-  }
-  // gsl_matrix_float_fprintf(stdout, mat, "%f");
-  // printf("----------------------------------\n");
-  // gsl_vector_float_fprintf(stdout, vec, "%f");
-  // printf("----------------------------------\n");
-
-  // Compute hardware matrix multiplication, programming matrix coeffs
-  // into matmul
-  ret = hw_matmul(&matmul, hw_result, mat, vec, 1);
-  if (ret < 0)
-  {
-    return -ret;
-  }
-
-  // Compute software matrix multiplication (GSL-CBLAS)
-  ret = sw_matmul(sw_result, mat, vec);
-  if (ret < 0)
-  {
-    return -ret;
-  }
-
-  // Compare
-  float score;
-  ret = eucl_dist(&score, sw_result, hw_result);
-  if (ret != 0)
-  {
-    return -ret;
+    dprintf(2, "Something went wrong...\n");
   }
   else
   {
-    printf("Distance between HW and SW vectors: %.10f\n", score);
+    print_results(&bench_info);
+  }
+
+  // Cleanup
+  ret = detach_matmul(&matmul);
+  if (ret < 0)
+  {
+    return -ret;
   }
 
   return 0;
+  // return bench_ret;
 }
