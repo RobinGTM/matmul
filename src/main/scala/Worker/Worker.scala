@@ -100,6 +100,8 @@ class Worker(
         mPtrReg := 0.U
       }
     }
+  } .elsewhen(RegNext(i.valid & i.write) & wCntReg === wid) {
+    wCntReg := 0.U
   }
 
   // Programming logic
