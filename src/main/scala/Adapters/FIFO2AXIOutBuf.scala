@@ -25,10 +25,6 @@ class FIFO2AXIOutBuf[T <: Data](
   // - bus is still not ready now
   val sendBufReg = RegInit(false.B)
 
-  // Data will be available on next tick but bus isn't ready: must
-  // store it in the output buffer in case the bus is still not ready
-  // on next tick
-  val nemptyNotReady = fifo_rd.o_nempty & ~i_ready
   val outBufReg      = RegInit(0.U.asTypeOf(dType))
   val outLoadedReg   = RegInit(false.B)
   val loadOut        = o_valid & ~i_ready & ~outLoadedReg
@@ -57,5 +53,5 @@ class FIFO2AXIOutBuf[T <: Data](
 
   // Assign data to buffer or input data
   o_data  := Mux(sendBufReg | outLoadedReg, outBufReg, fifo_rd.o_data)
-  o_valid := RegNext(fifo_rd.o_nempty) | sendBufReg
+  o_valid := RegNext(fifo_rd.o_nempty & fifo_rd.i_en) | sendBufReg | outLoadedReg
 }

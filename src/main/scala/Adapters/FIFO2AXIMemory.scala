@@ -22,7 +22,7 @@ class FIFO2AXIMemory(
   // Sending state register
   val rSendReg    = RegInit(false.B)
   // Ready to receive request when not sending
-  s_axi_rd.arready := ~rSendReg
+  s_axi_rd.arready := ~rSendReg & fifo_rd.o_nempty
 
   // AR channel handshake
   val arHandshake = s_axi_rd.arvalid & s_axi_rd.arready

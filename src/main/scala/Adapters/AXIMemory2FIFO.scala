@@ -56,5 +56,5 @@ class AXIMemory2FIFO(
   // Forward wdata (wstrb is ignored)
   s_axi_wr.wready  := fifo_wr.o_ready & recvReg & ~bValidReg
   fifo_wr.i_data   := s_axi_wr.wdata
-  fifo_wr.i_we     := s_axi_wr.wvalid
+  fifo_wr.i_we     := s_axi_wr.wvalid & s_axi_wr.wready
 }

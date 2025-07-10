@@ -19,7 +19,7 @@ class AXIS2FIFO(
   val fifo_wr = IO(Flipped(new AsyncFIFOWriteInterface(UInt(AXIS_W.W))))
 
   // AXI-S tkeep is ignored
-  fifo_wr.i_we   := s_axis.tvalid
+  fifo_wr.i_we   := s_axis.tvalid & s_axis.tready
   fifo_wr.i_data := s_axis.tdata
   s_axis.tready  := fifo_wr.o_ready
 
