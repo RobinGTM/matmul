@@ -55,7 +55,7 @@ class AXIWrapper(
       CTL_AW,
       CTL_W,
       0x0,
-      0 // No additional registers (control reg only)
+      2 // 2 regs for M_HEIGHT and M_WIDTH
     ))
 
     // Input FIFO write port

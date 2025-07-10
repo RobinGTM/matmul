@@ -23,7 +23,11 @@ class DriverDefsHeader(
       else "#ifdef HARDFLOAT\n#undef HARDFLOAT\n#endif /* HARDFLOAT */\n"
     }",
     "\n",
-    s"#define CTL_REG  0\n",
+    s"#define CTL_REG    ${param.CTL_REG}\n",
+    s"#define SAF_BIT    ${param.CTL_SAF}\n",
+    s"#define HEIGHT_REG ${param.HEIGHT_REG / 4}\n",
+    s"#define WIDTH_REG  ${param.WIDTH_REG / 4}\n",
+    "\n",
     s"#define CMD_PROG (1 << ${param.CTL_PROG})\n",
     s"#define RDY_FLAG (1 << ${param.CTL_READY})\n",
     "\n",

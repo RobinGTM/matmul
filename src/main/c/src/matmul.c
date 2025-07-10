@@ -6,6 +6,7 @@
 #include <gsl/gsl_vector.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 
 #include "hardware.h"
 #include "matmul.h"
@@ -45,26 +46,41 @@ int attach_matmul(matmul_t * matmul)
   }
   else
   {
+    matmul->m_width = matmul->s_axil_ctl[WIDTH_REG];
+    matmul->m_height = matmul->s_axil_ctl[HEIGHT_REG];
+    matmul->saf = (matmul->s_axil_ctl[CTL_REG] >> SAF_BIT) % 2;
+    if (!matmul->m_width)
+    {
+      dprintf(2, "[WARNING]: Could not read width from hardware, "
+              "using %d defined in header\n", M_WIDTH);
+      matmul->m_width = M_WIDTH;
+    }
+    if (!matmul->m_height)
+    {
+      dprintf(2, "[WARNING]: Could not height width from hardware, "
+              "using %d defined in header\n", M_HEIGHT);
+      matmul->m_height = M_HEIGHT;
+    }
     return matmul->s_axil_ctl[CTL_REG];
   }
 }
 
 int prog(const matmul_t * matmul, const gsl_matrix_float * mat)
 {
-  if (mat->size1 != M_HEIGHT || mat->size2 != M_WIDTH)
+  if (mat->size1 != matmul->m_height || mat->size2 != matmul->m_width)
   {
     dprintf(2, "%s: Cannot send matrix with invalid size!\n", __FUNCTION__);
     dprintf(2, "(hardware is %dx%d while matrix is %ldx%ld)\n",
-            M_HEIGHT, M_WIDTH, mat->size1, mat->size2);
+            matmul->m_height, matmul->m_width, mat->size1, mat->size2);
     return -1;
   }
-  aximm_t * coeffs = (aximm_t *)malloc(sizeof(aximm_t) * M_HEIGHT * M_WIDTH);
+  aximm_t * coeffs = (aximm_t *)malloc(sizeof(aximm_t) * matmul->m_height * matmul->m_width);
   unsigned int idx = 0;
   // Placeholder for matrix coeff
   float curr;
-  for (int i = 0; i < M_HEIGHT; i++)
+  for (int i = 0; i < matmul->m_height; i++)
   {
-    for (int j = 0; j < M_WIDTH; j++)
+    for (int j = 0; j < matmul->m_width; j++)
     {
       curr = gsl_matrix_float_get(mat, i, j);
       memcpy(&coeffs[idx++], &curr, sizeof(float));
@@ -78,7 +94,8 @@ int prog(const matmul_t * matmul, const gsl_matrix_float * mat)
           __FUNCTION__, matmul->s_axil_ctl[CTL_REG]);
 
   // Write to XDMA host 2 card driver fd
-  int written = write(matmul->s_axi_h2c_fd, coeffs, M_HEIGHT * M_WIDTH * sizeof(aximm_t));
+  int written = write(matmul->s_axi_h2c_fd, coeffs,
+                      matmul->m_height * matmul->m_width * sizeof(aximm_t));
 
   // Cleanup
   free(coeffs);
@@ -94,24 +111,24 @@ int prog(const matmul_t * matmul, const gsl_matrix_float * mat)
 
 int send(const matmul_t * matmul, const gsl_vector_float * vec)
 {
-  if (vec->size != M_WIDTH)
+  if (vec->size != matmul->m_width)
   {
     dprintf(2, "%s: Cannot send vector with invalid size!\n", __FUNCTION__);
     dprintf(2, "(hardware matrix width is %d while vector has %ld coeffs)\n",
-            M_WIDTH, vec->size);
+            matmul->m_width, vec->size);
     return -1;
   }
-  aximm_t * coeffs = (aximm_t *)malloc(sizeof(aximm_t) * M_WIDTH);
+  aximm_t * coeffs = (aximm_t *)malloc(sizeof(aximm_t) * matmul->m_width);
   // Placeholder for vector coeff
   float curr;
-  for (int i = 0; i < M_WIDTH; i++)
+  for (int i = 0; i < matmul->m_width; i++)
   {
     curr = gsl_vector_float_get(vec, i);
     memcpy(&coeffs[i], &curr, sizeof(float));
   }
 
   // Send vector
-  int written = write(matmul->s_axi_h2c_fd, coeffs, M_WIDTH * sizeof(aximm_t));
+  int written = write(matmul->s_axi_h2c_fd, coeffs, matmul->m_width * sizeof(aximm_t));
 
   free(coeffs);
 
@@ -126,17 +143,17 @@ int send(const matmul_t * matmul, const gsl_vector_float * vec)
 
 int recv(const matmul_t * matmul, gsl_vector_float * vec_out)
 {
-  if (vec_out->size != M_HEIGHT)
+  if (vec_out->size != matmul->m_height)
   {
     dprintf(2, "%s: Cannot read into vector with invalid size!\n", __FUNCTION__);
     dprintf(2, "(hardware matrix height is %d while vector has %ld coeffs)\n",
-            M_HEIGHT, vec_out->size);
+            matmul->m_height, vec_out->size);
     return -1;
   }
-  aximm_t * out = (aximm_t *)malloc(M_HEIGHT * sizeof(aximm_t));
+  aximm_t * out = (aximm_t *)malloc(matmul->m_height * sizeof(aximm_t));
 
   // Read XDMA driver output
-  int readcnt = read(matmul->s_axi_c2h_fd, out, M_HEIGHT * sizeof(aximm_t));
+  int readcnt = read(matmul->s_axi_c2h_fd, out, matmul->m_height * sizeof(aximm_t));
 
   if (readcnt < 0)
   {
@@ -147,11 +164,11 @@ int recv(const matmul_t * matmul, gsl_vector_float * vec_out)
 
   // Read output into vector
   float curr;
-  for (int i = 0; i < M_HEIGHT; i++)
+  for (int i = 0; i < matmul->m_height; i++)
   {
     memcpy(&curr, (aximm_t *)&(out[i]), sizeof(float));
     // Output of matmul is reversed
-    gsl_vector_float_set(vec_out, M_HEIGHT - 1 - i, curr);
+    gsl_vector_float_set(vec_out, matmul->m_height - 1 - i, curr);
   }
 
   return matmul->s_axil_ctl[CTL_REG];
@@ -209,6 +226,9 @@ int hw_matmul(const matmul_t * matmul, gsl_vector_float * vec_out,
   }
   // Send vector
   RUN_CHECK(send(matmul, vec), ret);
+  struct timespec slp_req = { .tv_sec = 0, .tv_nsec = 10 * 100};
+  struct timespec slp_rem = { .tv_sec = 0, .tv_nsec = 0 };
+  nanosleep(&slp_req, &slp_rem);
   // Read output
   RUN_CHECK(recv(matmul, vec_out), ret);
   return matmul->s_axil_ctl[CTL_REG];

@@ -1,6 +1,7 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
+#include "matmul.h"
 #include "benchmark.h"
 
 typedef enum parser_exit
@@ -12,9 +13,9 @@ typedef enum parser_exit
 } parser_exit_t;
 
 // Print matmul size
-void print_hw(void);
+void print_hw(matmul_t * matmul);
 // Print help string
-void print_usage(char * name);
+void print_usage(char * name, matmul_t * matmul);
 // Parse command line
 parser_exit_t parse_args(int argc, char ** argv, benchinfo_t * bench_info);
 //// DEBUG

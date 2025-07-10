@@ -14,9 +14,12 @@ typedef uint32_t axilctl_t;
 
 typedef struct matmul_struct
 {
-  axilctl_t * s_axil_ctl;
-  int         s_axi_h2c_fd;
-  int         s_axi_c2h_fd;
+  axilctl_t *  s_axil_ctl;
+  int          s_axi_h2c_fd;
+  int          s_axi_c2h_fd;
+  unsigned int m_width;
+  unsigned int m_height;
+  char         saf;
 } matmul_t;
 
 // Attach XDMA driver devices to matmul struct

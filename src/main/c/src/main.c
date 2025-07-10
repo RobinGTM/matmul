@@ -15,16 +15,25 @@
 
 int main(int argc, char ** argv)
 {
+  // Attach hardware
+  matmul_t matmul;
+  int ret;
+  ret = attach_matmul(&matmul);
+  if (ret < 0)
+  {
+    return -ret;
+  }
+
   benchinfo_t bench_info;
   parser_exit_t parser_ret = parse_args(argc, argv, &bench_info);
   if (parser_ret == EXIT_HELP || argc == 0)
   {
-    print_usage(argv[0]);
+    print_usage(argv[0], &matmul);
     return 0;
   }
   else if (parser_ret == EXIT_HW)
   {
-    print_hw();
+    print_hw(&matmul);
     return 0;
   }
   else if (parser_ret != 0)
@@ -35,19 +44,6 @@ int main(int argc, char ** argv)
 
   // print_benchinfo(&bench_info);
   // return 0;
-
-  // Attach hardware
-  matmul_t matmul;
-  int ret;
-  ret = attach_matmul(&matmul);
-  if (ret < 0)
-  {
-    return -ret;
-  }
-  else
-  {
-    dprintf(2, "CTL: 0x%x\n", ret);
-  }
 
   // Do benchmark
   int bench_ret = do_benchmark(&matmul, &bench_info);

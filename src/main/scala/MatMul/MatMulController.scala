@@ -43,6 +43,8 @@ class MatMulController(
   // Control register is asynchronous R/W (LUT, probably too small to
   // instantiate BRAMs anyway)
   // R/W logic
+  // Registers 2 and 3 allow reading matrix width and matrix height
+  // from hardware
   when(ctl_reg.i_we) {
     ctl_reg.o_data := 0.U
     when(ctl_reg.i_addr === 0.U) {
@@ -50,8 +52,12 @@ class MatMulController(
       ctlReg := (ctl_reg.i_data | ctlReg.asUInt).asBools
     }
   } .elsewhen(ctl_reg.i_en) {
-    when(ctl_reg.i_addr === 0.U) {
+    when(ctl_reg.i_addr === (PARAM.CTL_REG / 4).U) {
       ctl_reg.o_data := ctlReg.asUInt
+    } .elsewhen(ctl_reg.i_addr === (PARAM.HEIGHT_REG / 4).U) {
+      ctl_reg.o_data := PARAM.M_HEIGHT.U
+    } .elsewhen(ctl_reg.i_addr === (PARAM.WIDTH_REG / 4).U) {
+      ctl_reg.o_data := PARAM.M_WIDTH.U
     } .otherwise {
       ctl_reg.o_data := 0.U
     }

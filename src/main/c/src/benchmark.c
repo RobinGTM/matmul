@@ -34,10 +34,10 @@ int do_benchmark(const matmul_t * matmul, benchinfo_t * bench_info)
   }
 
   // Allocate vectors and matrix
-  gsl_matrix_float * mat = gsl_matrix_float_alloc(M_HEIGHT, M_WIDTH);
-  gsl_vector_float * vec = gsl_vector_float_alloc(M_WIDTH);
-  gsl_vector_float * hw_result = gsl_vector_float_alloc(M_HEIGHT);
-  gsl_vector_float * sw_result = gsl_vector_float_alloc(M_HEIGHT);
+  gsl_matrix_float * mat = gsl_matrix_float_alloc(matmul->m_height, matmul->m_width);
+  gsl_vector_float * vec = gsl_vector_float_alloc(matmul->m_width);
+  gsl_vector_float * hw_result = gsl_vector_float_alloc(matmul->m_height);
+  gsl_vector_float * sw_result = gsl_vector_float_alloc(matmul->m_height);
 
   int total_runs = bench_info->n_mat * bench_info->n_vec;
 

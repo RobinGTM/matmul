@@ -192,7 +192,7 @@ package object utils {
     val OFIFO_DEPTH = pow(2, log2Up(4 * M_HEIGHT)).toInt
     val OFIFO_CNT_W = log2Up(OFIFO_DEPTH)
     // Input FIFO is bigger
-    val IFIFO_DEPTH = pow(2, log2Up(M_HEIGHT * M_WIDTH)).toInt
+    val IFIFO_DEPTH = pow(2, log2Up(4 * M_WIDTH)).toInt
     val IFIFO_CNT_W = log2Up(IFIFO_DEPTH)
 
     val DW = if(USE_HARDFLOAT) { 32 } else { SAF_WIDTH }
@@ -202,6 +202,10 @@ package object utils {
     val CTL_READY = 0x2
     // Set to 1 if SAF is enabled (convenience)
     val CTL_SAF   = 0x10
+
+    val CTL_REG    = 0x0
+    val HEIGHT_REG = 0x4
+    val WIDTH_REG  = 0x8
   }
 
   // Small bundle to carry write control addr / data through only one

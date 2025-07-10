@@ -6,21 +6,25 @@
 
 #include "parser.h"
 #include "benchmark.h"
+#include "matmul.h"
 #include "hardware.h"
 
 #define DFL_NMAT 1
 #define DFL_NVEC 1
 
-void print_hw(void)
+void print_hw(matmul_t * matmul)
 {
-#ifdef HARDFLOAT
-  printf("%dx%d_hardfloat\n", M_HEIGHT, M_WIDTH);
-#else
-  printf("%dx%d_saf\n", M_HEIGHT, M_WIDTH);
-#endif /* HARDFLOAT */
+  if (matmul->saf)
+  {
+    printf("%dx%d_saf\n", matmul->m_height, matmul->m_width);
+  }
+  else
+  {
+    printf("%dx%d_hardfloat\n", matmul->m_height, matmul->m_width);
+  }
 }
 
-void print_usage(char * name)
+void print_usage(char * name, matmul_t * matmul)
 {
   printf("Usage: %s", name);
   if (strlen(name) > 48) printf(" \\\n");
@@ -38,7 +42,7 @@ void print_usage(char * name)
   printf("  -h:              print this help and exit\n");
   for (int i = 0; i < strlen(name) + strlen("Usage: "); i++) { printf("-"); }; printf("\n");
   printf("HARDWARE: ");
-  print_hw();
+  print_hw(matmul);
 }
 
 static void init_benchinfo(benchinfo_t * bench_info)
