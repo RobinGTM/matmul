@@ -10,6 +10,8 @@
 
 int do_benchmark(const matmul_t * matmul, benchinfo_t * bench_info)
 {
+  dprintf(2, "Random seed: %d\n", bench_info->seed);
+
   // Seed random number generator
   srand(bench_info->seed);
 
