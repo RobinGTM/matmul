@@ -10,7 +10,7 @@ import asyncfifo.interfaces._
 
 class AXIMemory2FIFO(
   AXI_AW : Int,
-  AXI_DW  : Int
+  AXI_DW : Int
 ) extends Module {
   // Write to FIFO
   val fifo_wr  = IO(Flipped(new AsyncFIFOWriteInterface(UInt(AXI_DW.W))))
@@ -28,7 +28,7 @@ class AXIMemory2FIFO(
   // Ready to receive address when FIFO is ready (address is ignored) and when
   // not already reading or sending BRESP
   s_axi_wr.awready := fifo_wr.o_ready & ~recvReg & ~bValidReg
-  // awlen is always 8-bit
+  // awlen is always 8-bit (unused)
   val awLenCntReg = RegInit(0.U(8.W))
   // awlen and recvReg state logic
   when(s_axi_wr.awvalid & s_axi_wr.awready) {
@@ -42,8 +42,8 @@ class AXIMemory2FIFO(
     }
   }
 
-  // Generate bresp (always ok)
-  when(s_axi_wr.wlast) {
+  // Generate bresp after last transaction (always ok)
+  when(s_axi_wr.wlast & s_axi_wr.wvalid & s_axi_wr.wready) {
     bValidReg := true.B
     recvReg   := false.B
   }
