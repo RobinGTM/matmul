@@ -226,9 +226,6 @@ int hw_matmul(const matmul_t * matmul, gsl_vector_float * vec_out,
   }
   // Send vector
   RUN_CHECK(send(matmul, vec), ret);
-  struct timespec slp_req = { .tv_sec = 0, .tv_nsec = 10 * 100};
-  struct timespec slp_rem = { .tv_sec = 0, .tv_nsec = 0 };
-  nanosleep(&slp_req, &slp_rem);
   // Read output
   RUN_CHECK(recv(matmul, vec_out), ret);
   return matmul->s_axil_ctl[CTL_REG];
