@@ -21,7 +21,7 @@ CLIBFLAGS       = -lgsl -lgslcblas
 # Includes .../host to get hardware.h
 CINCFLAGS       = -I$(CINCDIR) -I$(BUILDDIR)/$(CHISEL_OUTDIR)/sw
 
-EXE_NAME        = matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT)-host
+EXE_NAME        = matmul-host
 
 objs := matmul.o matvec.o benchmark.o parser.o
 
