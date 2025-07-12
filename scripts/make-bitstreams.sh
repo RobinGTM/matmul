@@ -16,9 +16,22 @@ if [ "$PWD" != "$TOPDIR" ]; then
 fi
 
 # Defaults are used in the article
-SIZES=${@:-10x10 50x50 100x50 100x100 100x200 300x300 400x400}
-BUILD_DIR=benchmark-builds
+DEFAULT_SIZES="10x10 50x50 100x50 100x100 100x200 300x300 400x400"
+SIZES=${@:-$DEFAULT_SIZES}
+BUILD_DIR=${BUILD_DIR:-benchmark-builds}
 VIVADO_LOGS=()
+
+if echo $SIZES | grep -qE '(-h|--help)'; then
+  echo "Usage: $0 <height1>x<width1> <height2>x<width2> ..."
+  echo
+  echo "Generates bitstreams for specified sizes."
+  echo "Pass sizes as <height>x<width>. The script can take any number of dimensions"
+  echo "(but it might take a lot of time to complete)."
+  echo
+  echo "If no arguments are passed, generates the bitstreams for sizes:"
+  echo "$DEFAULT_SIZES"
+  exit
+fi
 
 for s in $SIZES; do
   for float in hardfloat saf; do
