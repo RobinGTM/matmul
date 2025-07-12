@@ -31,7 +31,7 @@ void print_usage(char * name, matmul_t * matmul)
   else { for (int i = 0; i < (51 - strlen(name)); i++) { printf(" "); }; printf("\\\n"); }
   printf("       [-m/--n-matrices <n_matrices>] [-s/--seed <seed>]  \\\n");
   printf("       [-n/--n-vectors <n_vecs>] [-w/--hardware]          \\\n");
-  printf("       [-h/--help]\n");
+  printf("       [-d/--dry-run] [-h/--help]\n");
   for (int i = 0; i < strlen(name) + strlen("Usage: "); i++) { printf("-"); }; printf("\n");
   printf("  -m <n_matrices>: generate <n_matrices> random float matrices (default %d)\n",
          DFL_NMAT);
@@ -39,6 +39,8 @@ void print_usage(char * name, matmul_t * matmul)
          DFL_NVEC);
   printf("  -s <seed>:       use <seed> to seed random generator (default: time(NULL))\n");
   printf("  -w:              print hardware information and exit\n");
+  printf("  -d:              dry-run: don't use hardware, just print matrices and vectors\n");
+  printf("  -p:              print result vectors\n");
   printf("  -h:              print this help and exit\n");
   for (int i = 0; i < strlen(name) + strlen("Usage: "); i++) { printf("-"); }; printf("\n");
   printf("HARDWARE: ");
@@ -47,6 +49,8 @@ void print_usage(char * name, matmul_t * matmul)
 
 static void init_benchinfo(benchinfo_t * bench_info)
 {
+  bench_info->dry_run = 0;
+  bench_info->print = 0;
   bench_info->n_mat = DFL_NMAT;
   bench_info->n_vec = DFL_NVEC;
   bench_info->seed = time(NULL);
@@ -63,13 +67,15 @@ static void init_benchinfo(benchinfo_t * bench_info)
 parser_exit_t parse_args(int argc, char ** argv, benchinfo_t * bench_info)
 {
   init_benchinfo(bench_info);
-  static const char * OPTSTRING = "-n:m:s:wh";
+  static const char * OPTSTRING = "-n:m:s:whdp";
   static struct option const LONGOPTS[] =
   {
     {"n-matrices", required_argument, NULL, 'm'},
     {"n-vectors", required_argument, NULL, 'n'},
     {"seed", required_argument, NULL, 's'},
     {"hardware", no_argument, NULL, 'w'},
+    {"dry-run", no_argument, NULL, 'd'},
+    {"print", no_argument, NULL, 'p'},
     {"help", no_argument, NULL, 'h'},
   };
 
@@ -78,6 +84,12 @@ parser_exit_t parse_args(int argc, char ** argv, benchinfo_t * bench_info)
   {
     switch(c)
     {
+    case 'd':
+      bench_info->dry_run = 1;
+      break;
+    case 'p':
+      bench_info->print = 1;
+      break;
     case 'n':
       bench_info->n_vec = atoi(optarg);
       if (!bench_info->n_vec || bench_info->n_vec < 0)

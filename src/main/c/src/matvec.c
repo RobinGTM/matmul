@@ -74,37 +74,6 @@ int eucl_dist(float * out, const gsl_vector_float * vec1, const gsl_vector_float
   }
 }
 
-// Debug
-int print_gsl_matrix_float(FILE *f, const gsl_matrix_float *m)
-{
-  if (!m)
-  {
-    GSL_ERROR("Cannot print unallocated matrix.", GSL_EINVAL);
-    return -1;
-  }
-  int status, n = 0;
-
-  for (size_t i = 0; i < m->size1; i++)
-  {
-    for (size_t j = 0; j < m->size2; j++)
-    {
-      if ((status = fprintf(f, "%f ", gsl_matrix_float_get(m, i, j))) < 0)
-      {
-        return -1;
-      }
-      n += status;
-    }
-
-    if ((status = fprintf(f, "\n")) < 0)
-    {
-      return -1;
-    }
-    n += status;
-  }
-
-  return n;
-}
-
 int sw_matmul(gsl_vector_float * out,
               const gsl_matrix_float * mat, const gsl_vector_float * vec)
 {

@@ -13,7 +13,4 @@ int eucl_dist(float * out, const gsl_vector_float * vec1, const gsl_vector_float
 // Software matrix-vector multiplication
 int sw_matmul(gsl_vector_float * out,
               const gsl_matrix_float * mat, const gsl_vector_float * vec);
-// Debugging
-int print_gsl_matrix_float(FILE *f, const gsl_matrix_float *m);
-
 #endif /* __MATVEC_H__ */

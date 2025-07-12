@@ -42,16 +42,13 @@ int main(int argc, char ** argv)
     return parser_ret;
   }
 
-  // print_benchinfo(&bench_info);
-  // return 0;
-
   // Do benchmark
   int bench_ret = do_benchmark(&matmul, &bench_info);
   if (bench_ret != 0)
   {
     dprintf(2, "Something went wrong...\n");
   }
-  else
+  else if (!bench_info.dry_run)
   {
     print_results(&bench_info);
   }

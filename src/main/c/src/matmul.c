@@ -111,24 +111,24 @@ int prog(const matmul_t * matmul, const gsl_matrix_float * mat)
 
 int send(const matmul_t * matmul, const gsl_vector_float * vec)
 {
-  if (vec->size != matmul->m_width)
-  {
-    dprintf(2, "%s: Cannot send vector with invalid size!\n", __FUNCTION__);
-    dprintf(2, "(hardware matrix width is %d while vector has %ld coeffs)\n",
-            matmul->m_width, vec->size);
-    return -1;
-  }
-  aximm_t * coeffs = (aximm_t *)malloc(sizeof(aximm_t) * matmul->m_width);
+  // if (vec->size != matmul->m_width)
+  // {
+  //   dprintf(2, "%s: Cannot send vector with invalid size!\n", __FUNCTION__);
+  //   dprintf(2, "(hardware matrix width is %d while vector has %ld coeffs)\n",
+  //           matmul->m_width, vec->size);
+  //   return -1;
+  // }
+  aximm_t * coeffs = (aximm_t *)malloc(sizeof(aximm_t) * vec->size);
   // Placeholder for vector coeff
   float curr;
-  for (int i = 0; i < matmul->m_width; i++)
+  for (int i = 0; i < vec->size; i++)
   {
     curr = gsl_vector_float_get(vec, i);
     memcpy(&coeffs[i], &curr, sizeof(float));
   }
 
   // Send vector
-  int written = write(matmul->s_axi_h2c_fd, coeffs, matmul->m_width * sizeof(aximm_t));
+  int written = write(matmul->s_axi_h2c_fd, coeffs, vec->size * sizeof(aximm_t));
 
   free(coeffs);
 

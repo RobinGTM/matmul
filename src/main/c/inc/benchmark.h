@@ -6,6 +6,8 @@
 // Benchmark information struct
 typedef struct benchinfo_struct
 {
+  char dry_run;
+  char print;
   int n_mat;
   int n_vec;
   int seed;
