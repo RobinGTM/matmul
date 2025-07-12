@@ -4,9 +4,8 @@ import chisel3._
 import chisel3.util._
 
 import mcp._
-import interfaces._
+import mcp.interfaces._
 import asyncfifo.interfaces._
-import matmul.utils.Parameters
 
 // Based on Cumming's Async FIFO and Clock Domain Crossing
 // whitepapers. The logic is really similar to that of the read port,

@@ -4,8 +4,6 @@ package asyncfifo
 import chisel3._
 import chisel3.util._
 
-import matmul.utils.Parameters
-
 package object interfaces {
   // Async FIFO read port
   class AsyncFIFOReadInterface[T <: Data](

@@ -6,7 +6,6 @@ import chisel3.util._
 import mcp._
 import mcp.interfaces._
 import asyncfifo.interfaces._
-import matmul.utils.Parameters
 
 // Based on Cumming's Async FIFO and Clock Domain Crossing whitepapers
 class AsyncFIFOReadPort[T <: Data](
