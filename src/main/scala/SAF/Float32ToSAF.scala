@@ -50,7 +50,7 @@ class Float32ToSAF(
   val esMa = Wire(UInt(W.W))
   // 2s complement if negative
   when(sign.asBool) {
-    esMa  := 1.U + (~ eMa)
+    esMa  := 1.U + (~eMa)
   } .otherwise {
     esMa  := eMa
   }

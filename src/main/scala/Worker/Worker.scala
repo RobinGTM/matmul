@@ -3,16 +3,13 @@ package matmul.worker
 import chisel3._
 import chisel3.util._
 
-import saf._
+import mac._
 import matmul.worker.interfaces._
 import matmul.utils.Parameters
-import hardfloat._
 
 class Worker(
   PARAM : Parameters
 ) extends Module {
-  // Data width
-  private val DW = if(PARAM.USE_HARDFLOAT) { 32 } else { PARAM.SAF_WIDTH }
   // If hardfloat is used, float is 32-bit
   // require((PARAM.USE_HARDFLOAT && DW == 32) || (!PARAM.USE_HARDFLOAT))
   /* I/O */
@@ -21,23 +18,18 @@ class Worker(
   // of identical modules that just change by one parameter
   val wid = IO(Input(UInt(WID_W.W)))
   // Input and output are the same
-  val i   = IO(Input(new WorkerInterface(DW)))
-  val o   = IO(Output(new WorkerInterface(DW)))
+  val i   = IO(Input(new WorkerInterface(PARAM.DW)))
+  val o   = IO(Output(new WorkerInterface(PARAM.DW)))
 
   /* INTERNALS */
   // Input buffer
   val iReg    = RegNext(i)
   // Accumulator
-  val accReg  = if(PARAM.USE_HARDFLOAT) {
-    // When using hardfloat, store recFNs, which are 1 bit wider
-    RegInit(0.U((DW + 1).W))
-  } else {
-    RegInit(0.U((DW).W))
-  }
+  val accReg  = RegInit(0.U(PARAM.DW.W))
   // Output buffer
   val oReg    = RegNext(iReg)
-  // Worker memory (matrix coefficients)
-  val wkMem   = SyncReadMem(PARAM.M_WIDTH, UInt(DW.W))
+  // Worker memory (matrix coefficients in float32)
+  val wkMem   = SyncReadMem(PARAM.M_WIDTH, UInt(PARAM.DW.W))
   // Memory address pointer
   val mPtrReg = RegInit(0.U(log2Up(PARAM.M_WIDTH).W))
   // Worker counter
@@ -55,7 +47,7 @@ class Worker(
   // Coefficient (memory content)
   // When input data must be accumulated, read memory to get coeff
   // ready for next tick, to be passed into the MAC
-  val coeff   = Wire(UInt(DW.W))
+  val coeff   = Wire(UInt(PARAM.DW.W))
   coeff      := wkMem.read(mPtrReg, iDoAcc)
 
   /* STATE LOGIC */
@@ -131,11 +123,7 @@ class Worker(
       }
     }
   } .elsewhen(sendAcc) {
-    if(PARAM.USE_HARDFLOAT) {
-      o.data := fNFromRecFN(8, 24, accReg)
-    } else {
-      o.data := accReg
-    }
+    o.data  := macRes
     o.valid := true.B
     o.write := true.B
     o.prog  := false.B
@@ -155,42 +143,15 @@ class Worker(
   // accumulator content to next worker with write flag on
 
   /* MODULES */
-  if(PARAM.USE_HARDFLOAT) {
-    // hardfloat multiplier
-    val hardMul   = Module(new MulRecFN(8, 24))
-    hardMul.io.roundingMode   := 0.U
-    hardMul.io.detectTininess := 0.U
-    // hardfloat adder
-    val hardAdder = Module(new AddRecFN(8, 24))
-    hardAdder.io.subOp          := false.B
-    hardAdder.io.roundingMode   := 0.U
-    hardAdder.io.detectTininess := 0.U
-    // Wiring
-    hardMul.io.a := recFNFromFN(8, 24, coeff)
-    hardMul.io.b := recFNFromFN(8, 24, iReg.data)
-    // MAC pipeline
-    val macReg = RegInit(0.U((DW + 1).W))
-    macReg := hardMul.io.out
-    // Adder
-    hardAdder.io.a := macReg
-    hardAdder.io.b := accReg
-    when(RegNext(RegNext(iDoAcc))) {
-      accReg := hardAdder.io.out
+  val macRes = Wire(UInt(PARAM.DW.W))
+  val mac : Module { def i_a : UInt; def i_b : UInt; def i_acc : Bool; def o_res : UInt } =
+    if(PARAM.USE_HARDFLOAT) {
+      Module(new HardMAC(PARAM.DW))
+    } else {
+      Module(new SAFMAC(PARAM.DW, PARAM.SAF_W, PARAM.SAF_L, PARAM.SAF_B, PARAM.SAF_L2N))
     }
-  } else {
-    // SAF multiplier
-    val safMul     = Module(new SAFMul(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
-    // SAF adder
-    val safAdder   = Module(new SAFAdder(PARAM.SAF_L, PARAM.SAF_W, PARAM.SAF_B, PARAM.SAF_L2N))
-    // Multiplier wiring
-    safMul.i_safA := coeff
-    safMul.i_safB := iReg.data
-    // MAC pipeline - SAFMul is pipelined internally
-    // Adder wiring
-    safAdder.i_safA := safMul.o_res
-    safAdder.i_safB := accReg
-    when(RegNext(RegNext(iDoAcc))) {
-      accReg := safAdder.o_res
-    }
-  }
+  mac.i_a   := coeff
+  mac.i_b   := iReg.data
+  mac.i_acc := RegNext(iDoAcc)
+  macRes    := mac.o_res
 }

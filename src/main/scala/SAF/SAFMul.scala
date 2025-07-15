@@ -5,82 +5,90 @@ import chisel3.util._
 
 import math.pow
 
+// SAFMul takes an extended floating point format (with signed,
+// expanded mantissa) and outputs a SAF
 class SAFMul(
+  DW  : Int = 33,
   L   : Int = 5,
-  W   : Int = 70,
-  B   : Int = 150,
+  W   : Int = 81,
+  B   : Int = 173,
   L2N : Int = 16
 ) extends Module {
-  private val SAF_W = W + 8 - L
-  private val DW = 32
+  // + 1 because of exponent summation
+  private val SAF_W = W + 8 - L + 1
   private val EW = 8
-  private val MW = 23
+  // Signed mantissa width
+  private val MW = 25
   // Float bias
   private val FB = 127
 
   /* I/O */
-  val i_safA = IO(Input(UInt(SAF_W.W)))
-  val i_safB = IO(Input(UInt(SAF_W.W)))
-  val o_res  = IO(Output(UInt(SAF_W.W)))
+  val i_a   = IO(Input(UInt(DW.W)))
+  val i_b   = IO(Input(UInt(DW.W)))
+  val o_saf = IO(Output(UInt(SAF_W.W)))
 
-  /* MUL */
-  // Decompose inputs
-  val reA = i_safA(SAF_W - 1, SAF_W - (EW - L))
-  val maA = i_safA(SAF_W - (EW - L) - 1, 0)
-  val reB = i_safB(SAF_W - 1, SAF_W - (EW - L))
-  val maB = i_safB(SAF_W - (EW - L) - 1, 0)
-  val eitherZero = (maA === 0.U) | (maB === 0.U)
-  val isNeg      = maA(W - 1) ^ maB(W - 1)
+  /* INTERNALS */
+  // Extract float subfields
+  val exA = i_a(32, 25)
+  val maA = i_a(24, 0).asSInt
+  val exB = i_b(32, 25)
+  val maB = i_b(24, 0).asSInt
+  // Zero and negative flags
+  val eitherZero = (exA === 0.U & maA === 0.S) | (exB === 0.U & maB === 0.S)
+  val isNeg      = maA(24) ^ maB(24)
 
-  // Multiplication
-  // Add exponents
-  val expt = Wire(UInt(EW.W))
-  expt    := (reA << L) + (reB << L) - B.U
-  val prodRe = expt(EW - 1, L)
-  val resSh  = expt(L - 1, 0)
+  // Product exponent (9 bits)
+  val prodEx = (exA +& exB) - FB.U
+  // Product of mantissae (50 bits + max shift from low exponent bits)
+  private val MANT_W = 50 + (1 << L) - 1
+  val prod   = Wire(SInt(MANT_W.W))
+  prod      := maA * maB
 
-  // Multiply mantissae
-  val m1 = Mux(maA(W - 1),
-    1.U + ~maA,
-    maA
-  )
-  val m2 = Mux(maB(W - 1),
-    1.U + ~maB,
-    maB
-  )
+  // printf(cf"maA: ${maA} maB: ${maB}\n");
 
-  //// PIPELINE ////
-  private val PROD_UMA_W = 2 * W + L
-  val pipeProdUMaReg = RegInit(0.U(PROD_UMA_W.W))
-  // Shift product to compensate for exponent reduction
-  pipeProdUMaReg := (m1 * m2) << resSh
-  val pipeProdReReg  = RegNext(prodRe)
-  //// PIPELINE ////
+  // Product reduced exponent (9 - L bits because of exponent addition)
+  val prodRe = prodEx(8, L)
+  // Product exponent low bits (left-shift)
+  val prodLs = prodEx(L - 1, 0)
 
-  // Bring MSB back in right position: between W - 1 and 0
-  val msbPos = PROD_UMA_W.U - PriorityEncoder(Reverse(pipeProdUMaReg))
+  // Shift mantissa by low exponent bits
+  val prodMa = Wire(UInt(MANT_W.W))
+  prodMa    := prod.asUInt << prodLs
+  // printf(cf"Shift: ${prodLs}\n");
 
-  val prEx  = Wire(UInt((EW - L).W))
-  val prUMa = Wire(UInt(PROD_UMA_W.W))
-  val shamt = Wire(UInt(log2Up(PROD_UMA_W).W))
-  when(msbPos > (W - 1).U) {
-    shamt := 1.U + ((msbPos - (W - 1).U) >> L)
-    prUMa := (pipeProdUMaReg >> (shamt << L)).asUInt(W - 1, 0)
-    prEx  := pipeProdReReg + shamt
+  // // Conversion to prime SAF
+  // // Find the MSB: XOR with sign bit
+  // val xOrS = prodMa.asUInt ^ Fill(W, prodMa(MANT_W - 1))
+  // // Find the position of the MSB of the xOrS vector
+  // val msbPos = (MANT_W.U - (~ prodMa(W - 1).asBool).asUInt) - PriorityEncoder(Reverse(xOrS))
+
+  // // Prime mantissa and exponent
+  // val prEx = Wire(UInt((EW - L).W))
+  // val prMa = Wire(UInt(W.W))
+  // val shiftAmount = Wire(UInt(log2Up(MANT_W).W))
+  // when(msbPos > (MW + pow(2, L).toInt).U) {
+  //   // If MSB is in the log2(N) supplementary bits, shift right to bring MSB in
+  //   // esMa(MW + 2^L - 1, MW), so shift by 1 + (msbpos - MW + 2^L - 1) // 2^L
+  //   shiftAmount := (1.U + ((msbPos - (MW + pow(2, L).toInt).U) >> L))
+  //   prMa := (prodMa >> (shiftAmount << L)).asUInt
+  //   prEx := (prodEx + shiftAmount).asUInt
+  // } .elsewhen(msbPos < (MW - 1).U) {
+  //   // If MSB is in the WM bits, shift left to put it in the 2^L top bits
+  //   shiftAmount := (((MW - 1).U - msbPos) >> L) + 1.U
+  //   prMa := (prodMa << (shiftAmount << L)).asUInt
+  //   prEx := (prodEx - shiftAmount).asUInt
+  // } .otherwise {
+  //   shiftAmount := 0.U
+  //   // Otherwise, nothing to do
+  //   prMa := prodMa.asUInt
+  //   prEx := prodEx.asUInt
+  // }
+
+  when(eitherZero) {
+    o_saf := 0.U
   } .otherwise {
-    shamt := 0.U
-    prUMa := pipeProdUMaReg(W - 1, 0)
-    prEx  := pipeProdReReg
-  }
-  val prMa = Mux(RegNext(isNeg),
-    1.U + ~prUMa(W - 1, 0),
-    prUMa(W - 1, 0)
-  )
-
-  // Output result
-  when(RegNext(eitherZero)) {
-    o_res := 0.U
-  } .otherwise {
-    o_res := Cat(prEx, prMa)
+    // o_saf := Cat(prEx, prMa)
+    o_saf := Cat(prodRe, prodMa)
+    // o_saf := prodRe
   }
 }

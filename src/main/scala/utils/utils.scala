@@ -8,6 +8,49 @@ import math.pow
 import java.lang.Float.floatToIntBits
 
 package object utils {
+  def expandF32(
+    f32 : UInt,
+  ) : UInt = {
+    val sign       = f32(31)
+    val expt       = f32(30, 23)
+    val mant       = f32(22, 0)
+    val expNonNull = ~(expt === 0.U)
+    val isNonNull  = ~(mant === 0.U)
+    // Expand mantissa
+    val eMant = Wire(UInt(25.W))
+    eMant    := Cat(expNonNull.asUInt, mant)
+    // Sign mantissa
+    val sMant = Wire(UInt(25.W))
+    sMant    := Mux(sign, 1.U + ~eMant, eMant)
+    val exF32 = Cat(f32(30, 23), sMant)
+    exF32
+  }
+
+  def restoreF32(
+    expF32 : UInt
+  ) : UInt = {
+    // Exponent and extended mantissa
+    val exp        = expF32(32, 25)
+    val eMant      = expF32(24, 0)
+    val isNegative = expF32(24)
+    val expNonNull = ~(exp === 0.U)
+    // Unsign mantissa
+    val uMant = Mux(isNegative, 1.U + ~expF32(23, 0), expF32(23, 0))(23, 0)
+    // Normalize mantissa
+    val nMant = (uMant - expNonNull)(22, 0)
+    val reF32 = Cat(isNegative, exp, nMant)
+    reF32
+  }
+
+  // def SAFToExpF32(
+  //   saf : UInt,
+  //   L   : Int = 5,
+  //   W   : Int = 81,
+  //   B   : Int = 173
+  // ) : UInt = {
+  //   val reEx = saf
+  // }
+
   def floatToSAF(
     f   : Float,
     L   : Int = 5,
@@ -195,7 +238,7 @@ package object utils {
     val IFIFO_DEPTH = pow(2, log2Up(4 * M_WIDTH)).toInt
     val IFIFO_CNT_W = log2Up(IFIFO_DEPTH)
 
-    val DW = if(USE_HARDFLOAT) { 32 } else { SAF_WIDTH }
+    val DW = 33
 
     val CTL_PROG  = 0x0
     val CTL_WRITE = 0x1

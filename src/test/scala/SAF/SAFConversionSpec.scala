@@ -12,7 +12,7 @@ import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 class Float32ToSAFSpec extends AnyFlatSpec with Matchers {
   "Float32ToSAF" should "work" in {
-    simulate(new Float32ToSAF) { uut =>
+    simulate(new Float32ToSAF(L = 4)) { uut =>
       // 0
       uut.i_f32.poke(0)
       println(s"${uut.o_saf.peek()}")
@@ -78,8 +78,8 @@ class Float32ToSAFSpec extends AnyFlatSpec with Matchers {
       println(s"${uut.o_saf.peek()}")
 
       // 0x1000000008C08000000
-      uut.i_f32.poke("h1000000008C08000000".U)
-      println(s"${uut.o_saf.peek()}")
+      // uut.i_f32.poke("h1000000008C08000000".U)
+      // println(s"${uut.o_saf.peek()}")
     }
   }
 }

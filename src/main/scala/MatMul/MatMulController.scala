@@ -10,6 +10,7 @@ import asyncfifo._
 import asyncfifo.interfaces._
 import axi.interfaces._
 import saf._
+import hardfloat.{recFNFromFN,fNFromRecFN}
 import matmul.interfaces._
 import matmul.utils._
 
@@ -98,14 +99,10 @@ class MatMulController(
   // When in SAF mode, MatMul controller converts outgoing SAFs to
   // floats
   if(PARAM.USE_HARDFLOAT) {
-    m_axis.tdata  := from_matmul.data
+    m_axis.tdata := fNFromRecFN(8, 24, from_matmul.data)
   } else {
-    val saf2Float = Module(new SAFToFloat32(
-      PARAM.SAF_L, PARAM.SAF_W,
-      PARAM.SAF_B, PARAM.SAF_L2N
-    ))
-    saf2Float.i_saf := from_matmul.data
-    m_axis.tdata    := saf2Float.o_f32
+    // Compact and unsign mantissa
+    m_axis.tdata := restoreF32(from_matmul.data)
   }
 
   // Unused
@@ -114,14 +111,10 @@ class MatMulController(
   // When in SAF mode, MatMul controller converts incoming floats to
   // SAF
   if(PARAM.USE_HARDFLOAT) {
-    to_matmul.data  := s_axis.tdata
+    to_matmul.data := recFNFromFN(8, 24, s_axis.tdata)
   } else {
-    val float2Saf = Module(new Float32ToSAF(
-      PARAM.SAF_L, PARAM.SAF_W,
-      PARAM.SAF_B, PARAM.SAF_L2N
-    ))
-    float2Saf.i_f32 := s_axis.tdata
-    to_matmul.data  := float2Saf.o_saf
+    // Expand and sign mantissa
+    to_matmul.data := expandF32(s_axis.tdata)
   }
   to_matmul.prog  := ctlReg(PARAM.CTL_PROG)
 }
