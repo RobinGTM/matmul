@@ -10,11 +10,16 @@ import org.scalatest.matchers.must.Matchers
 // to generate VCD traces with chisel 6.6.0
 import chisel3.simulator.VCDHackedEphemeralSimulator._
 
-import matmul.utils._
+import saf.utils._
 
 class SAFAddSpec extends AnyFlatSpec with Matchers {
   "SAFAdd" should "work" in {
-    simulate(new SAFAdder) { uut =>
+    simulate(new SAFAdder(
+      L = 5,
+      W = 70,
+      B = 150,
+      L2N = 16
+    )) { uut =>
       // -1 + 1
       uut.i_safA.poke("b0111111111111111111000000000000000000000000000000000000000000000000000000".U)
       uut.i_safB.poke("b0110000000000000001000000000000000000000000000000000000000000000000000000".U)
@@ -102,16 +107,16 @@ class SAFMulAdd extends Module {
 
   val mul1 = Module(new SAFMul)
   val mul2 = Module(new SAFMul)
-  mul1.i_a := i_a
-  mul1.i_b := i_b
-  mul2.i_a := i_c
-  mul2.i_b := i_d
+  mul1.i_a := expandF32(i_a)
+  mul1.i_b := expandF32(i_b)
+  mul2.i_a := expandF32(i_c)
+  mul2.i_b := expandF32(i_d)
 
   val add = Module(new SAFAdder(5, 81, 173, 16))
   add.i_safA := mul1.o_saf
   add.i_safB := mul2.o_saf
 
-  o_res := mul2.o_saf
+  o_res := add.o_res
 }
 
 class SAFMulAddSpec extends AnyFlatSpec with Matchers {

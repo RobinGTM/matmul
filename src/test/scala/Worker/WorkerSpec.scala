@@ -13,6 +13,7 @@ import chisel3.simulator.VCDHackedEphemeralSimulator._
 import math.pow
 
 import matmul.utils._
+import saf.utils._
 import matmul.testutils._
 
 class WorkerSpec extends AnyFlatSpec with Matchers {

@@ -11,6 +11,7 @@ import org.scalatest.matchers.must.Matchers
 import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 import matmul.utils._
+import saf.utils._
 import matmul.testutils._
 
 class MatMulSpec extends AnyFlatSpec with Matchers {

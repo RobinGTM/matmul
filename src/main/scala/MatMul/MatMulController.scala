@@ -10,6 +10,7 @@ import asyncfifo._
 import asyncfifo.interfaces._
 import axi.interfaces._
 import saf._
+import saf.utils._
 import hardfloat.{recFNFromFN,fNFromRecFN}
 import matmul.interfaces._
 import matmul.utils._

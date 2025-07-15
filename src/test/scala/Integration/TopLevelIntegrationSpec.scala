@@ -20,7 +20,8 @@ import axi.SAXIRW2Full
 import axi.interfaces._
 import mcp._
 import asyncfifo._
-import matmul.utils._
+import matmul.utils.Parameters
+import saf.utils._
 import matmul.testutils.FakeClockDivider
 import matmul.testutils._
 
@@ -34,15 +35,16 @@ class TopLevelIntegration(
 
   val core = Module(new CoreWrapper(PARAM))
   val axi  = Module(new AXIWrapper(
-    PARAM.FIFO_CNT_W,
+    PARAM.IFIFO_CNT_W,
+    PARAM.OFIFO_CNT_W,
     PARAM.CTL_AW,
     PARAM.CTL_W,
     PARAM.AXI_AW,
     PARAM.AXI_W
   ))
 
-  val iFifoMem = SyncReadMem(PARAM.FIFO_DEPTH, UInt(32.W))
-  val oFifoMem = SyncReadMem(PARAM.FIFO_DEPTH, UInt(32.W))
+  val iFifoMem = SyncReadMem(PARAM.IFIFO_DEPTH, UInt(32.W))
+  val oFifoMem = SyncReadMem(PARAM.OFIFO_DEPTH, UInt(32.W))
 
   // AXI wrapper
   axi.axi_aclk  := axi_aclk.asClock

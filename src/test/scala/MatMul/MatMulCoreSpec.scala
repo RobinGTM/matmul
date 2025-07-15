@@ -12,6 +12,7 @@ import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 import matmul.utils._
 import matmul.testutils._
+import saf.utils._
 
 class MatMulCoreSpec extends AnyFlatSpec with Matchers {
   val file = "src/test/resources/dummy16-matrix.txt"
