@@ -10,15 +10,13 @@ import math.pow
 class SAFMul(
   DW  : Int = 33,
   L   : Int = 5,
-  W   : Int = 81,
-  B   : Int = 173,
-  L2N : Int = 16
+  W   : Int = 81
 ) extends Module {
-  // + 1 because of exponent summation
-  private val SAF_W = W + 8 - L + 1
+  private val SAF_W = W + 8 - L
   private val EW = 8
-  // Signed mantissa width
+  // Signed, extended mantissa width
   private val MW = 25
+  require(W >= MW + (1 << L))
   // Float bias
   private val FB = 127
 
@@ -38,23 +36,36 @@ class SAFMul(
   val isNeg      = maA(24) ^ maB(24)
 
   // Product exponent (9 bits)
-  val prodEx = (exA +& exB) - FB.U
+  // Overflow: set exponent to all 1s (infinity)
+  val exSum = (exA +& exB) - FB.U
+  // printf(cf"${exSum}\n")
+  // printf(cf"${exSum(8)}\n")
+  val prodEx = Mux(exSum(8), Fill(8, 1.U), exSum(7, 0))
   // Product of mantissae (50 bits + max shift from low exponent bits)
-  private val MANT_W = 50 + (1 << L) - 1
-  val prod   = Wire(SInt(MANT_W.W))
-  prod      := maA * maB
+  private val PROD_W = MW * 2 + (1 << L) - 1
+  // Product
+  val pr   = Wire(SInt(PROD_W.W))
+  pr      := maA * maB
+  // Normalize and round
+  // Mantissa width will be 2 * MW + 2^L - 1 - (MW - 1) after shifting
+  // private val MANT_W = MW + (1 << L)
+  val prod = Wire(SInt(W.W))
+  prod    := Cat((pr >> (MW - 1)), pr(MW - 2, 0).orR).asSInt
 
   // printf(cf"maA: ${maA} maB: ${maB}\n");
 
-  // Product reduced exponent (9 - L bits because of exponent addition)
-  val prodRe = prodEx(8, L)
+  // Product reduced exponent
+  val prodRe = prodEx(7, L)
   // Product exponent low bits (left-shift)
   val prodLs = prodEx(L - 1, 0)
 
   // Shift mantissa by low exponent bits
-  val prodMa = Wire(UInt(MANT_W.W))
+  val prodMa = Wire(UInt(W.W))
   prodMa    := prod.asUInt << prodLs
   // printf(cf"Shift: ${prodLs}\n");
+
+  // printf(cf"${prodRe}<<<<<<<<\n")
+  // printf(cf"${prodMa}<<<<<<<<\n")
 
   // // Conversion to prime SAF
   // // Find the MSB: XOR with sign bit

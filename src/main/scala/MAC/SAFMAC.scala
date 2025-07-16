@@ -4,28 +4,28 @@ import chisel3._
 import chisel3.util._
 
 import saf._
+import saf.utils._
 
 class SAFMAC(
   DW  : Int = 33,
-  W   : Int = 81,
-  L   : Int = 5,
-  B   : Int = 173,
-  L2N : Int = 16
+  W   : Int = 70,
+  L   : Int = 5
 ) extends Module {
+  private val SAF_WIDTH = W + 8 - L
   /* I/O */
   val i_a   = IO(Input(UInt(DW.W)))
   val i_b   = IO(Input(UInt(DW.W)))
   val i_acc = IO(Input(Bool()))
   val o_res = IO(Output(UInt(DW.W)))
+  val o_saf = IO(Output(UInt(SAF_WIDTH.W)))
 
   /* MODULES */
   // Multiplier
-  val safMul   = Module(new SAFMul(L, W, B, L2N))
+  val safMul   = Module(new SAFMul(DW, L, W))
   // Adder
-  val safAdder = Module(new SAFAdder(L, W, B, L2N))
+  val safAdder = Module(new SAFAdder(L, W))
 
   /* INTERNALS */
-  private val SAF_WIDTH = W + 8 - L
   val macReg = RegInit(0.U(SAF_WIDTH.W))
   val accReg = RegInit(0.U(SAF_WIDTH.W))
 
@@ -41,5 +41,7 @@ class SAFMAC(
     accReg := safAdder.o_res
   }
 
-  o_res := accReg ////// TODO convert to expanded float
+  // Output expanded float32
+  o_res := SAFToExpF32(accReg)
+  o_saf := accReg
 }

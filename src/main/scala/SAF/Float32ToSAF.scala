@@ -13,13 +13,15 @@ import chisel3.util._
 // IEEE-754 float32 to prime SAF converter
 class Float32ToSAF(
   L   : Int = 5,   // Bits discarded from the exponent
-  W   : Int = 70,  // Width of the extended mantissa (log2(N) + 2^L - 1 + wm)
-  B   : Int = 150, // Bias
+  W   : Int = 70,  // Width of the extended mantissa (must be greater than 23 + 2 + 2^L)
   L2N : Int = 16   // log2(N)
 ) extends RawModule {
   private val DW = 32
   private val EW = 8
   private val MW = 23
+  // Mantissa width must be greater than extended, signed mantissa
+  // width (25) + maximum possible left shift (2^L)
+  require(W >= (MW + 2 + (1 << L)))
 
   /* I/O */
   val i_f32 = IO(Input(UInt(32.W)))

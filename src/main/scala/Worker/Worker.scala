@@ -144,11 +144,13 @@ class Worker(
 
   /* MODULES */
   val macRes = Wire(UInt(PARAM.DW.W))
+  // Allows plugging to a conditional module,
+  // https://stackoverflow.com/questions/70390834/conditional-module-instantiation-in-chisel
   val mac : Module { def i_a : UInt; def i_b : UInt; def i_acc : Bool; def o_res : UInt } =
     if(PARAM.USE_HARDFLOAT) {
       Module(new HardMAC(PARAM.DW))
     } else {
-      Module(new SAFMAC(PARAM.DW, PARAM.SAF_W, PARAM.SAF_L, PARAM.SAF_B, PARAM.SAF_L2N))
+      Module(new SAFMAC(PARAM.DW, PARAM.SAF_W, PARAM.SAF_L))
     }
   mac.i_a   := coeff
   mac.i_b   := iReg.data

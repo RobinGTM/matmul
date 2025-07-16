@@ -16,9 +16,7 @@ class SAFAddSpec extends AnyFlatSpec with Matchers {
   "SAFAdd" should "work" in {
     simulate(new SAFAdder(
       L = 5,
-      W = 70,
-      B = 150,
-      L2N = 16
+      W = 70
     )) { uut =>
       // -1 + 1
       uut.i_safA.poke("b0111111111111111111000000000000000000000000000000000000000000000000000000".U)
@@ -50,33 +48,42 @@ class SAFAddSpec extends AnyFlatSpec with Matchers {
 
 class SAFMulWrapper(
   L : Int = 5,
-  SAF_W : Int = 81 + 8 - 5 + 1
+  SAF_W : Int = 70 + 8 - 5
 ) extends Module {
   val i_a = IO(Input(UInt(32.W)))
   val i_b = IO(Input(UInt(32.W)))
   val fb_a = IO(Output(UInt(33.W)))
   val fb_b = IO(Output(UInt(33.W)))
   val o_saf = IO(Output(UInt(SAF_W.W)))
+  val o_f32 = IO(Output(UInt(32.W)))
 
-  val mul = Module(new SAFMul(L = L))
+  val mul = Module(new SAFMul(L = L, W = 70))
+  val saf2F32 = Module(new SAFToFloat32(L = L, W = 70))
+
   mul.i_a := expandF32(i_a)
   fb_a    := expandF32(i_a)
   mul.i_b := expandF32(i_b)
   fb_b    := expandF32(i_b)
 
+  saf2F32.i_saf := mul.o_saf
+
   o_saf := mul.o_saf
+  o_f32 := saf2F32.o_f32
 }
 
 class SAFMulSpec extends AnyFlatSpec with Matchers {
   "SAFMul" should "work" in {
     simulate(new SAFMulWrapper) { uut =>
       // -1 * 1
+      println("==================")
       uut.i_a.poke(0xbf800000)
       uut.i_b.poke(0x3f800000)
       println(uut.fb_a.peek())
       println(uut.fb_b.peek())
       println(uut.o_saf.peek())
+      println(uut.o_f32.peek())
 
+      println("==================")
       uut.clock.step()
       // 15.999999 * 10
       uut.i_a.poke(0x417fffff)
@@ -84,7 +91,9 @@ class SAFMulSpec extends AnyFlatSpec with Matchers {
       println(uut.fb_a.peek())
       println(uut.fb_b.peek())
       println(uut.o_saf.peek())
+      println(uut.o_f32.peek())
 
+      println("==================")
       uut.clock.step()
       // -10.78125 * 10
       uut.i_a.poke(0xc12c8000)
@@ -92,6 +101,16 @@ class SAFMulSpec extends AnyFlatSpec with Matchers {
       println(uut.fb_a.peek())
       println(uut.fb_b.peek())
       println(uut.o_saf.peek())
+      println(uut.o_f32.peek())
+
+      println("==================")
+      uut.clock.step()
+      uut.i_a.poke(0xc8756f08)
+      uut.i_b.poke(0x43a09d91)
+      println(uut.fb_a.peek())
+      println(uut.fb_b.peek())
+      println(uut.o_saf.peek())
+      println(uut.o_f32.peek())
 
       uut.clock.step()
     }
@@ -103,16 +122,16 @@ class SAFMulAdd extends Module {
   val i_b = IO(Input(UInt(33.W)))
   val i_c = IO(Input(UInt(33.W)))
   val i_d = IO(Input(UInt(33.W)))
-  val o_res = IO(Output(UInt(85.W)))
+  val o_res = IO(Output(UInt(73.W)))
 
-  val mul1 = Module(new SAFMul)
-  val mul2 = Module(new SAFMul)
+  val mul1 = Module(new SAFMul(33, 5, 70))
+  val mul2 = Module(new SAFMul(33, 5, 70))
   mul1.i_a := expandF32(i_a)
   mul1.i_b := expandF32(i_b)
   mul2.i_a := expandF32(i_c)
   mul2.i_b := expandF32(i_d)
 
-  val add = Module(new SAFAdder(5, 81, 173, 16))
+  val add = Module(new SAFAdder(5, 70))
   add.i_safA := mul1.o_saf
   add.i_safB := mul2.o_saf
 

@@ -10,9 +10,7 @@ import math.pow
 // Custom SAF to IEEE-754 float32 converter
 class SAFToFloat32(
   L   : Int = 5,
-  W   : Int = 70,
-  B   : Int = 150,
-  L2N : Int = 16
+  W   : Int = 70
 ) extends RawModule {
   private val SAF_W = W + 8 - L
   // Extended mantissa's leading bit position (invisible leading bit bit of the
@@ -20,6 +18,7 @@ class SAFToFloat32(
   private val HBIT_POS = (W / 24).toInt * 24
   // Center position
   private val CENTER_POS = ((W + 8 - L) / 2).toInt
+  require(W >= 25 + (1 << L))
 
   /* I/O */
   val i_saf = IO(Input(UInt(SAF_W.W)))

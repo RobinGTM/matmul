@@ -100,6 +100,8 @@ class MatMulController(
   // When in SAF mode, MatMul controller converts outgoing SAFs to
   // floats
   if(PARAM.USE_HARDFLOAT) {
+    // Mysterious hardfloat "recoded" format, probably the same as
+    // mine (didn't bother checking)
     m_axis.tdata := fNFromRecFN(8, 24, from_matmul.data)
   } else {
     // Compact and unsign mantissa

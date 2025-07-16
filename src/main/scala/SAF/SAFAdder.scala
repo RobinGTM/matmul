@@ -6,14 +6,13 @@ import chisel3.util._
 // Outputs a + b in SAF
 class SAFAdder(
   L   : Int = 5,
-  W   : Int = 70,
-  B   : Int = 150,
-  L2N : Int = 16
+  W   : Int = 70
 ) extends RawModule {
   private val SAF_W = W + 8 - L
   private val DW = 32
   private val EW = 8
   private val MW = 23
+  require(W >= MW + 2 + (1 << L))
 
   /* I/O */
   val i_safA = IO(Input(UInt(SAF_W.W)))

@@ -37,20 +37,36 @@ package object utils {
     // Unsign mantissa
     val uMant = Mux(isNegative, 1.U + ~expF32(23, 0), expF32(23, 0))(23, 0)
     // Normalize mantissa
-    val nMant = (uMant - expNonNull)(22, 0)
+    val nMant = (uMant - (expNonNull << 23))(22, 0)
     val reF32 = Cat(isNegative, exp, nMant)
     reF32
   }
 
   // Convert SAF float to expanded float
-  // def SAFToExpF32(
-  //   saf : UInt,
-  //   L   : Int = 5,
-  //   W   : Int = 81,
-  //   B   : Int = 173
-  // ) : UInt = {
-  //   val reEx = saf
-  // }
+  def SAFToExpF32(
+    saf : UInt,
+    L   : Int = 5,
+    W   : Int = 70,
+  ) : UInt = {
+    val SAF_W = W + 8 - L
+    // Reduced exponent
+    val reEx = saf(SAF_W - 1, SAF_W - (8 - L))
+    // Extended mantissa
+    val exMa = saf(W - 1, 0)
+    // Sign
+    val sign = exMa(W - 1)
+    // Unsign mantissa
+    val uMa = Mux(sign, 1.U + ~exMa, exMa)
+    // Find MSB to determine lshift
+    val msbPos = (W.U - PriorityEncoder(Reverse(uMa)))
+    // Unshift mantissa
+    val mant = (exMa << (W.U - msbPos - 1.U))(W - 1, W - 25)
+    // printf(cf"${msbPos}<<<<<<<\n")
+    // printf(cf"${reEx}<<<<<<<\n")
+    // Recreate original exponent
+    val expt = (reEx << L) + msbPos - 1.U - 23.U
+    Cat(expt, mant)
+  }
 
   def floatToSAF(
     f   : Float,

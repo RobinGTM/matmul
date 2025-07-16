@@ -10,6 +10,8 @@ import org.scalatest.matchers.must.Matchers
 // to generate VCD traces with chisel 6.6.0
 import chisel3.simulator.VCDHackedEphemeralSimulator._
 
+import saf.utils._
+
 class Float32ToSAFSpec extends AnyFlatSpec with Matchers {
   "Float32ToSAF" should "work" in {
     simulate(new Float32ToSAF(L = 4)) { uut =>
@@ -211,6 +213,44 @@ class SAFConversionSpec extends AnyFlatSpec with Matchers {
       println("b11111111011111111111111111111111".U)
       println(s"${uut.o_f32.peek()}")
       println("========================================")
+    }
+  }
+}
+
+class SAFToExpF32Test(
+  L : Int = 5,
+  W : Int = 70,
+) extends Module {
+  val i_f32 = IO(Input(UInt(32.W)))
+  val o_exp = IO(Output(UInt(33.W)))
+  val o_saf = IO(Output(UInt((W + 8 - L).W)))
+  val o_exp_from_saf = IO(Output(UInt(33.W)))
+  val o_restored_f32 = IO(Output(UInt(32.W)))
+
+  val f32Saf = Module(new Float32ToSAF)
+
+  f32Saf.i_f32 := i_f32
+  o_saf := f32Saf.o_saf
+
+  o_exp := expandF32(i_f32)
+
+  o_exp_from_saf := SAFToExpF32(f32Saf.o_saf)
+
+  o_restored_f32 := restoreF32(o_exp)
+}
+
+class SAFToExpF32TestSpec extends AnyFlatSpec with Matchers {
+  "Exp conversions" should "work" in {
+    simulate(new SAFToExpF32Test(L = 5, W = 70)) { uut =>
+      for(f <- Array(0x41200000, 0xc8756f08)) {
+        println(s"====== ${BigInt(f)} ======")
+        uut.i_f32.poke(f)
+        println(s"expF32: ${uut.o_exp.peek()}")
+        println(s"SAF   : ${uut.o_saf.peek()}")
+        println(s"EfSAF : ${uut.o_exp_from_saf.peek()}")
+        println(s"REST  : ${uut.o_restored_f32.peek()}")
+        uut.clock.step()
+      }
     }
   }
 }
