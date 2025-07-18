@@ -16,8 +16,8 @@ import saf.utils._
 
 class MatMulCoreSpec extends AnyFlatSpec with Matchers {
   val file = "src/test/resources/dummy16-matrix.txt"
-  val MH = 16
-  val MW = 16
+  val MH = 10
+  val MW = 5
   val USE_HARDFLOAT = true
 
   "MatMul" should "work" in {
@@ -86,7 +86,47 @@ class MatMulCoreSpec extends AnyFlatSpec with Matchers {
       uut.i.data.poke(0)
       uut.i.valid.poke(false)
 
-      uut.clock.step(256)
+      while(!uut.o.ready.peek().litToBoolean) {
+        uut.clock.step()
+      }
+      for(i <- 0 to MW - 1) {
+        if(USE_HARDFLOAT) {
+          uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
+        } else {
+          uut.i.data.poke(floatToSAFUInt((- i - 1).toFloat))
+        }
+        uut.i.valid.poke(true)
+        uut.clock.step()
+      }
+      uut.i.data.poke(0)
+      uut.i.valid.poke(false)
+
+      for(i <- 0 to 10)
+      {
+        while(!uut.o.ready.peek().litToBoolean) {
+          uut.clock.step()
+        }
+        for(i <- 0 to MW - 1) {
+          if(USE_HARDFLOAT) {
+            uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
+          } else {
+            uut.i.data.poke(floatToSAFUInt((- i - 1).toFloat))
+          }
+          if(i == 3) {
+            uut.i.valid.poke(false)
+            uut.clock.step(40)
+          }
+          uut.i.valid.poke(true)
+          uut.clock.step()
+        }
+        uut.i.data.poke(0)
+        uut.i.valid.poke(false)
+      }
+
+      while(!uut.o.ready.peek().litToBoolean) {
+        uut.clock.step()
+      }
+      uut.clock.step(10)
     }
   }
 }

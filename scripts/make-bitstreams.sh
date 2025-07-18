@@ -47,13 +47,19 @@ for s in $SIZES; do
     # Shorten name
     CHISEL_DIR=${s}_${float/hardfloat/hf}
     # hardfloat can run a little faster
-    if [ $float == saf ]; then DPLL=10; else DPLL=9; fi
+    if [ $float == saf ]; then
+      DPLL=10
+      MPLL=9
+    else
+      DPLL=8
+      MPLL=6
+    fi
 
     # Cleanup and make
     make clean CHISEL_OUTDIR=$CHISEL_DIR BUILDDIR=$BUILD_DIR \
-         M_WIDTH=$WIDTH M_HEIGHT=$HEIGHT FLOAT=$float PLL_DIV=$DPLL
+         M_WIDTH=$WIDTH M_HEIGHT=$HEIGHT FLOAT=$float PLL_DIV=$DPLL PLL_MULT=$MPLL
     make all CHISEL_OUTDIR=$CHISEL_DIR BUILDDIR=$BUILD_DIR \
-         M_WIDTH=$WIDTH M_HEIGHT=$HEIGHT FLOAT=$float PLL_DIV=$DPLL
+         M_WIDTH=$WIDTH M_HEIGHT=$HEIGHT FLOAT=$float PLL_DIV=$DPLL PLL_MULT=$MPLL
 
     LOG=/tmp/vivado-$CHISEL_DIR.log
     VIVADO_LOGS+="$LOG "

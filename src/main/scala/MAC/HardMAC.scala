@@ -12,6 +12,7 @@ class HardMAC(
   val i_a   = IO(Input(UInt(DW.W)))
   val i_b   = IO(Input(UInt(DW.W)))
   val i_acc = IO(Input(Bool()))
+  val i_rst = IO(Input(Bool()))
   val o_res = IO(Output(UInt(DW.W)))
 
   /* MODULES */
@@ -37,6 +38,10 @@ class HardMAC(
 
   when(RegNext(i_acc)) {
     accReg := hardAdder.io.out
+  }
+
+  when(i_rst) {
+    accReg := 0.U
   }
 
   o_res := accReg

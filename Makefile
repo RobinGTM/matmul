@@ -45,13 +45,23 @@ base:
 	mkdir -p $(OBJDIR)
 
 hw: base
+ifndef VITIS
 	sbt -mem $(SBT_MEM) \
-	  "run -w $(M_WIDTH) -h $(M_HEIGHT) \
+	  "runMain matmul.stage.Main -w $(M_WIDTH) -h $(M_HEIGHT) \
 	   -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
 	   -fbase $(BASE_FREQ) \
 	   -o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
 	   $(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf') \
 	  "
+else
+	sbt -mem $(SBT_MEM) \
+	  "runMain matmul.stage.VitisMain -w $(M_WIDTH) -h $(M_HEIGHT) \
+	   -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
+	   -fbase $(BASE_FREQ) \
+	   -o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
+	   $(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf') \
+	  "
+endif
 
 # hardware.h: SIM_XDMA.sv
 # 	ln -sfv $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/hardware.h $(CINCDIR)/hardware.h

@@ -97,7 +97,7 @@ class SLRConstraints(param : Parameters, model : String = "u200") {
         outString = outString + s"# SLR${slr}\n"
         for(blk <- 0 to slrAssignments(slr).length - 1) {
           var currBlk = slrAssignments(slr)(blk)
-          var blkStr = s"kern/matmul/workers_${currBlk}/*"
+          var blkStr = s"core/core/matmulCore/workers_${currBlk}/*"
           outString = outString +
           slrCstrPrefix + s"SLR${slr}" + " " + s"[get_cells ${blkStr}]\n"
         }

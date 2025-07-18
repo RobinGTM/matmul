@@ -33,18 +33,20 @@ package object utils {
     val exp        = expF32(32, 25)
     val eMant      = expF32(24, 0)
     val isNegative = expF32(24)
+    val isZero     = (exp === 0.U) && (eMant === 0.U)
     val expNonNull = ~(exp === 0.U)
     // Unsign mantissa
     val uMant = Mux(isNegative, 1.U + ~expF32(23, 0), expF32(23, 0))(23, 0)
     // Normalize mantissa
     val nMant = (uMant - (expNonNull << 23))(22, 0)
-    val reF32 = Cat(isNegative, exp, nMant)
+    val reF32 = Mux(isZero, 0.U(32.W), Cat(isNegative, exp, nMant))
     reF32
   }
 
   // Convert SAF float to expanded float
   def SAFToExpF32(
     saf : UInt,
+    DW  : Int = 33,
     L   : Int = 5,
     W   : Int = 70,
   ) : UInt = {
@@ -65,7 +67,7 @@ package object utils {
     // printf(cf"${reEx}<<<<<<<\n")
     // Recreate original exponent
     val expt = (reEx << L) + msbPos - 1.U - 23.U
-    Cat(expt, mant)
+    Mux(exMa === 0.U, 0.U(DW.W), Cat(expt, mant))
   }
 
   def floatToSAF(

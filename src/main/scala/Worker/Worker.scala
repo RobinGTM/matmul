@@ -49,6 +49,8 @@ class Worker(
   // ready for next tick, to be passed into the MAC
   val coeff   = Wire(UInt(PARAM.DW.W))
   coeff      := wkMem.read(mPtrReg, iDoAcc)
+  // MAC result wire
+  val macRes  = Wire(UInt(PARAM.DW.W))
 
   /* STATE LOGIC */
   // When data comes in with valid & prog set, program memory with the
@@ -129,8 +131,6 @@ class Worker(
     o.prog  := false.B
     // Reset worker counter
     wCntReg := 0.U
-    // Reset accumulator
-    accReg  := 0.U
   } .otherwise {
     o := 0.U.asTypeOf(o)
   }
@@ -143,17 +143,22 @@ class Worker(
   // accumulator content to next worker with write flag on
 
   /* MODULES */
-  val macRes = Wire(UInt(PARAM.DW.W))
   // Allows plugging to a conditional module,
   // https://stackoverflow.com/questions/70390834/conditional-module-instantiation-in-chisel
-  val mac : Module { def i_a : UInt; def i_b : UInt; def i_acc : Bool; def o_res : UInt } =
-    if(PARAM.USE_HARDFLOAT) {
-      Module(new HardMAC(PARAM.DW))
-    } else {
-      Module(new SAFMAC(PARAM.DW, PARAM.SAF_W, PARAM.SAF_L))
-    }
+  val mac : Module {
+    def i_a   : UInt;
+    def i_b   : UInt;
+    def i_acc : Bool;
+    def i_rst : Bool;
+    def o_res : UInt
+  } = if(PARAM.USE_HARDFLOAT) {
+    Module(new HardMAC(PARAM.DW))
+  } else {
+    Module(new SAFMAC(PARAM.DW, PARAM.SAF_L, PARAM.SAF_W))
+  }
   mac.i_a   := coeff
   mac.i_b   := iReg.data
   mac.i_acc := RegNext(iDoAcc)
   macRes    := mac.o_res
+  mac.i_rst := sendAcc
 }

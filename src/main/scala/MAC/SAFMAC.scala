@@ -8,14 +8,15 @@ import saf.utils._
 
 class SAFMAC(
   DW  : Int = 33,
-  W   : Int = 70,
-  L   : Int = 5
+  L   : Int = 5,
+  W   : Int = 70
 ) extends Module {
   private val SAF_WIDTH = W + 8 - L
   /* I/O */
   val i_a   = IO(Input(UInt(DW.W)))
   val i_b   = IO(Input(UInt(DW.W)))
   val i_acc = IO(Input(Bool()))
+  val i_rst = IO(Input(Bool()))
   val o_res = IO(Output(UInt(DW.W)))
   val o_saf = IO(Output(UInt(SAF_WIDTH.W)))
 
@@ -41,7 +42,12 @@ class SAFMAC(
     accReg := safAdder.o_res
   }
 
+  when(i_rst) {
+    accReg := 0.U
+  }
+
   // Output expanded float32
   o_res := SAFToExpF32(accReg)
+  // Control output for testing
   o_saf := accReg
 }
