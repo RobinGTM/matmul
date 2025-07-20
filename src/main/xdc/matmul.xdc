@@ -73,8 +73,8 @@
 ##
 #############################################################################################################
 create_clock -period 10.000 -name sys_clk [get_ports sys_clk_p]
-create_clock -period 6.400 -name sim_ref_clk [get_ports coreclk_ref_p]
-# SIM clock
+create_clock -period 6.400 -name coreclk_ref [get_ports coreclk_ref_p]
+# Core clock
 create_generated_clock -name coreclk \
     -source [get_pins coreClkPll/CLKIN] [get_pins coreClkPll/CLKOUT0]
 #create_generated_clock -name sim_clk #    -source [get_pins simClkIBufDS/O] #    [get_pins simClkBufG/O]
