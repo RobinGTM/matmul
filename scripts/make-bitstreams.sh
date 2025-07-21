@@ -51,7 +51,7 @@ for s in $SIZES; do
       DPLL=10
       MPLL=9
     else
-      DPLL=8
+      DPLL=9
       MPLL=6
     fi
 
