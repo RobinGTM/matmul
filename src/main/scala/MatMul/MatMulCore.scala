@@ -17,9 +17,9 @@ class MatMulCore(
   /* STATE */
   val readyReg = RegInit(true.B)
   // Input counter
-  val iCntReg  = RegInit(0.U(PARAM.M_WIDTH.W))
+  val iCntReg  = RegInit(0.U(log2Up(PARAM.M_WIDTH).W))
   // Output counter
-  val oCntReg  = RegInit(0.U(PARAM.M_HEIGHT.W))
+  val oCntReg  = RegInit(0.U(log2Up(PARAM.M_HEIGHT).W))
 
   /* WORKER UNITS */
   val workers = for(w <- 0 to PARAM.M_HEIGHT - 1) yield {
