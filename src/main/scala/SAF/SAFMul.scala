@@ -28,11 +28,13 @@ class SAFMul(
   /* INTERNALS */
   // Extract float subfields
   val exA = i_a(32, 25)
-  val maA = i_a(24, 0).asSInt
+  // Get unsigned mantissae for multiplication
+  val maA = Mux(i_a(24), 1.U + ~i_a(24, 0), i_a(24, 0))
   val exB = i_b(32, 25)
-  val maB = i_b(24, 0).asSInt
+  val maB = Mux(i_b(24), 1.U + ~i_b(24, 0), i_b(24, 0))
+  val sign = i_a(24) ^ i_b(24)
   // Zero and negative flags
-  val eitherZero = (exA === 0.U & maA === 0.S) | (exB === 0.U & maB === 0.S)
+  val eitherZero = (exA === 0.U & maA === 0.U) | (exB === 0.U & maB === 0.U)
   val isNeg      = maA(24) ^ maB(24)
 
   // Product exponent (9 bits)
@@ -44,8 +46,7 @@ class SAFMul(
   // Product of mantissae (50 bits + max shift from low exponent bits)
   private val PROD_W = MW * 2 + (1 << L) - 1
   // Product
-  val pr   = Wire(SInt(PROD_W.W))
-  pr      := maA * maB
+  val pr = (maA(MW - 1, 0) * maB(MW - 1, 0))(2 * MW - 1, 0)
   // Normalize and round
   // Mantissa width will be 2 * MW + 2^L - 1 - (MW - 1) after shifting
   // private val MANT_W = MW + (1 << L)
@@ -62,44 +63,14 @@ class SAFMul(
   // Shift mantissa by low exponent bits
   val prodMa = Wire(UInt(W.W))
   prodMa    := prod.asUInt << prodLs
-  // printf(cf"Shift: ${prodLs}\n");
 
-  // printf(cf"${prodRe}<<<<<<<<\n")
-  // printf(cf"${prodMa}<<<<<<<<\n")
+  // Re-sign mantissa
+  val maOut = Mux(sign, 1.U + ~prodMa, prodMa)
 
-  // // Conversion to prime SAF
-  // // Find the MSB: XOR with sign bit
-  // val xOrS = prodMa.asUInt ^ Fill(W, prodMa(MANT_W - 1))
-  // // Find the position of the MSB of the xOrS vector
-  // val msbPos = (MANT_W.U - (~ prodMa(W - 1).asBool).asUInt) - PriorityEncoder(Reverse(xOrS))
-
-  // // Prime mantissa and exponent
-  // val prEx = Wire(UInt((EW - L).W))
-  // val prMa = Wire(UInt(W.W))
-  // val shiftAmount = Wire(UInt(log2Up(MANT_W).W))
-  // when(msbPos > (MW + pow(2, L).toInt).U) {
-  //   // If MSB is in the log2(N) supplementary bits, shift right to bring MSB in
-  //   // esMa(MW + 2^L - 1, MW), so shift by 1 + (msbpos - MW + 2^L - 1) // 2^L
-  //   shiftAmount := (1.U + ((msbPos - (MW + pow(2, L).toInt).U) >> L))
-  //   prMa := (prodMa >> (shiftAmount << L)).asUInt
-  //   prEx := (prodEx + shiftAmount).asUInt
-  // } .elsewhen(msbPos < (MW - 1).U) {
-  //   // If MSB is in the WM bits, shift left to put it in the 2^L top bits
-  //   shiftAmount := (((MW - 1).U - msbPos) >> L) + 1.U
-  //   prMa := (prodMa << (shiftAmount << L)).asUInt
-  //   prEx := (prodEx - shiftAmount).asUInt
-  // } .otherwise {
-  //   shiftAmount := 0.U
-  //   // Otherwise, nothing to do
-  //   prMa := prodMa.asUInt
-  //   prEx := prodEx.asUInt
-  // }
-
+  // Output control
   when(eitherZero) {
     o_saf := 0.U
   } .otherwise {
-    // o_saf := Cat(prEx, prMa)
-    o_saf := Cat(prodRe, prodMa)
-    // o_saf := prodRe
+    o_saf := Cat(prodRe, maOut)
   }
 }

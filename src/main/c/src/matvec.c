@@ -20,7 +20,10 @@ int populate_randvec(gsl_vector_float * out)
     int rand2;
     // Don't let rand2 be 0
     do { rand2 = rand(); } while (rand2 == 0);
+    // Random sign (coin flip)
+    // int sign = 2 * (int)(rand() <= RAND_MAX / 2) - 1;
     // Generate random coeff
+    // float coeff = (float)sign * (float)rand1 / (float)rand2;
     float coeff = (float)rand1 / (float)rand2;
     // Place it in vec
     gsl_vector_float_set(out, i, coeff);
@@ -43,7 +46,10 @@ int populate_randmat(gsl_matrix_float * out)
       int rand2;
       // Don't let rand2 be 0
       do { rand2 = rand(); } while (rand2 == 0);
+      // Random sign (coin flip)
+      // int sign = 2 * (int)(rand() <= RAND_MAX / 2) - 1;
       // Generate random coeff
+      // float coeff = (float)sign * (float)rand1 / (float)rand2;
       float coeff = (float)rand1 / (float)rand2;
       // Place it in vec
       gsl_matrix_float_set(out, i, j, coeff);
