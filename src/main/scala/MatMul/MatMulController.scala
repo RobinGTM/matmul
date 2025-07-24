@@ -34,12 +34,12 @@ class MatMulController(
 
   /* STATE REGISTERS */
   // Main control reg
-  val ctlReg   = RegInit(VecInit(Seq.fill(PARAM.CTL_W)(false.B)))
+  val ctlReg  = RegInit(VecInit(Seq.fill(PARAM.CTL_W)(false.B)))
   // Counters
   // Worker counter (height)
-  val wCntReg  = RegInit(0.U(PARAM.M_HEIGHT.W))
+  val wCntReg = RegInit(0.U(log2Up(PARAM.M_HEIGHT).W))
   // Memory counter (width)
-  val mCntReg  = RegInit(0.U(PARAM.M_WIDTH.W))
+  val mCntReg = RegInit(0.U(log2Up(PARAM.M_WIDTH).W))
 
   /* REGISTER R/W */
   // Control register is asynchronous R/W (LUT, probably too small to
