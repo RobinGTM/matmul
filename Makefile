@@ -16,6 +16,9 @@ CINCDIR         = src/main/c/inc
 BUILDDIR        = build
 BUILDDIR_ABS    = $(PWD)/$(BUILDDIR)
 OBJDIR         := $(BUILDDIR)/$(CHISEL_OUTDIR)/objs
+REPORTDIR       = $(BUILDDIR)/$(CHISEL_OUTDIR)/reports
+LOGDIR          = $(BUILDDIR)/$(CHISEL_OUTDIR)/logs
+VIVADO_LOG      = $(LOGDIR)/$(CHISEL_OUTDIR).vivado.log
 CFLAGS          = -O2 -g -Wall
 CLIBFLAGS       = -lgsl -lgslcblas
 # Includes .../host to get hardware.h
@@ -63,6 +66,26 @@ else
 	  "
 endif
 
+# .ONESHELL:
+# bitstream: hw host
+# 	mkdir -p $(REPORTDIR)
+# 	mkdir -p $(LOGDIR)
+# 	vivado -mode tcl -source <<EOF | tee $(VIVADO_LOG) /dev/tty \
+# 	read_verilog $(BUILDDIR)/$(CHISEL_OUTDIR)/hw/SSFEEFTopLevel.sv
+# 	read_ip src/main/ip/xdma/xdma_0.xci
+# 	read_xdc src/main/xdc/matmul.xdc
+# 	synth_design -part xcu200-fsgd2104-2-e -top TopLevel
+# 	opt_design
+# 	place_design
+# 	phys_opt_design
+# 	route_design
+# 	phys_opt_design
+# 	report_utilization -hierarchical -file $(REPORTDIR)/post-impl-util.txt
+# 	report_timing_summary -file $(REPORTDIR)/post-impl-timing.txt
+# 	write_bitstream -force $(BUILDDIR)/$(CHISEL_OUTDIR)/hw/matmul-${M_HEIGHT}x${M_WIDTH}.bit
+# 	EOF
+
+
 # hardware.h: SIM_XDMA.sv
 # 	ln -sfv $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/hardware.h $(CINCDIR)/hardware.h
 
@@ -74,7 +97,7 @@ host: $(objs) base
 	-o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)/sw/$(EXE_NAME) \
 	$(OBJDIR)/*.o $(CSRCDIR)/main.c
 
-all: hw host
+all: hw host #bitstream
 	@echo "[MatMul done!]"
 	@echo "Outputs were written to $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)"
 
