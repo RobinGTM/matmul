@@ -13,11 +13,8 @@ class SAFMAC(
 ) extends Module {
   private val SAF_WIDTH = W + 8 - L
   /* I/O */
-  val i_a   = IO(Input(UInt(DW.W)))
-  val i_b   = IO(Input(UInt(DW.W)))
-  val i_acc = IO(Input(Bool()))
-  val i_rst = IO(Input(Bool()))
-  val o_res = IO(Output(UInt(DW.W)))
+  val io    = IO(new MACInterface(DW))
+  // Only for testing
   val o_saf = IO(Output(UInt(SAF_WIDTH.W)))
 
   /* MODULES */
@@ -30,24 +27,24 @@ class SAFMAC(
   val macReg = RegInit(0.U(SAF_WIDTH.W))
   val accReg = RegInit(0.U(SAF_WIDTH.W))
 
-  safMul.i_a := i_a
-  safMul.i_b := i_b
+  safMul.i_a := io.i_a
+  safMul.i_b := io.i_b
 
   macReg := safMul.o_saf
 
   safAdder.i_safA := macReg
   safAdder.i_safB := accReg
 
-  when(RegNext(i_acc)) {
+  when(RegNext(io.i_acc)) {
     accReg := safAdder.o_res
   }
 
-  when(i_rst) {
+  when(io.i_rst) {
     accReg := 0.U
   }
 
   // Output expanded float32
-  o_res := SAFToExpF32(accReg)
+  io.o_res := SAFToExpF32(accReg)
   // Control output for testing
   o_saf := accReg
 }

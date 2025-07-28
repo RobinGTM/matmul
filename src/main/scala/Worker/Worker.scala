@@ -143,22 +143,15 @@ class Worker(
   // accumulator content to next worker with write flag on
 
   /* MODULES */
-  // Allows plugging to a conditional module,
-  // https://stackoverflow.com/questions/70390834/conditional-module-instantiation-in-chisel
-  val mac : Module {
-    def i_a   : UInt;
-    def i_b   : UInt;
-    def i_acc : Bool;
-    def i_rst : Bool;
-    def o_res : UInt
-  } = if(PARAM.USE_HARDFLOAT) {
-    Module(new HardMAC(PARAM.DW))
-  } else {
-    Module(new SAFMAC(PARAM.DW, PARAM.SAF_L, PARAM.SAF_W))
-  }
-  mac.i_a   := coeff
-  mac.i_b   := iReg.data
-  mac.i_acc := RegNext(iDoAcc)
-  macRes    := mac.o_res
-  mac.i_rst := sendAcc
+  val mac = Module(new MACWrapper(
+    PARAM.USE_HARDFLOAT,
+    PARAM.DW,
+    PARAM.SAF_L,
+    PARAM.SAF_W
+  ))
+  mac.io.i_a   := coeff
+  mac.io.i_b   := iReg.data
+  mac.io.i_acc := RegNext(iDoAcc)
+  macRes       := mac.io.o_res
+  mac.io.i_rst := sendAcc
 }
