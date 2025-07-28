@@ -15,12 +15,13 @@ object Main {
       new TopLevel(PARAM = param),
       Array(
         "--target-dir", hwDir,
+        // "--split-verilog",
         "--target", "systemverilog"
-      ),
+      ) ++ param.CIRCT_ARGS,
       firtoolOpts = Array(
         "-disable-all-randomization",
         "-strip-debug-info"
-      )
+      ) ++ param.FIRTOOL_ARGS
     )
 
     // Create SLR assignment constraints
@@ -49,11 +50,11 @@ object VitisMain {
       Array(
         "--target-dir", hwDir,
         "--target", "systemverilog"
-      ),
+      ) ++ param.CIRCT_ARGS,
       firtoolOpts = Array(
         "-disable-all-randomization",
         "-strip-debug-info"
-      )
+      ) ++ param.FIRTOOL_ARGS
     )
 
     // Create SLR assignment constraints

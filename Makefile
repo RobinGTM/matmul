@@ -3,8 +3,8 @@ M_HEIGHT        = 16
 M_WIDTH         = 16
 FLOAT           = saf
 SBT_MEM         = 65535
-PLL_MULT        = 6
-PLL_DIV         = 6
+PLL_MULT        = 9
+PLL_DIV         = 10
 BASE_FREQ       = 156.25
 CORE_FREQ      := '$(BASE_FREQ) * $(PLL_MULT) / $(PLL_DIV)'
 CHISEL_OUTDIR   = matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT)-$(shell \
@@ -25,6 +25,27 @@ CLIBFLAGS       = -lgsl -lgslcblas
 CINCFLAGS       = -I$(CINCDIR) -I$(BUILDDIR)/$(CHISEL_OUTDIR)/sw
 
 EXE_NAME        = matmul-host
+
+SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
+-xpll $(PLL_MULT) -dpll $(PLL_DIV) \
+-fbase $(BASE_FREQ) \
+-o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
+$(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf')
+
+ifdef VITIS
+SBT_RUN = runMain matmul.stage.VitisMain
+else
+SBT_RUN = runMain matmul.stage.Main
+endif
+
+ifdef CIRCT_FLAGS
+SBT_RUN_FLAGS += -C \"$(CIRCT_FLAGS)\"
+endif
+ifdef FIRTOOL_FLAGS
+SBT_RUN_FLAGS += -F \"$(FIRTOOL_FLAGS)\"
+endif
+
+SBT_RUN_CMD = "$(SBT_RUN) $(SBT_RUN_FLAGS)"
 
 objs := matmul.o matvec.o benchmark.o parser.o
 
@@ -48,23 +69,7 @@ base:
 	mkdir -p $(OBJDIR)
 
 hw: base
-ifndef VITIS
-	sbt -mem $(SBT_MEM) \
-	  "runMain matmul.stage.Main -w $(M_WIDTH) -h $(M_HEIGHT) \
-	   -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
-	   -fbase $(BASE_FREQ) \
-	   -o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
-	   $(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf') \
-	  "
-else
-	sbt -mem $(SBT_MEM) \
-	  "runMain matmul.stage.VitisMain -w $(M_WIDTH) -h $(M_HEIGHT) \
-	   -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
-	   -fbase $(BASE_FREQ) \
-	   -o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
-	   $(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf') \
-	  "
-endif
+	sbt --batch --color=always --mem $(SBT_MEM) $(SBT_RUN_CMD)
 
 # .ONESHELL:
 # bitstream: hw host
@@ -107,7 +112,7 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	rm -rf $(BUILDDIR_ABS)
+	find $(BUILDDIR_ABS) -name 'matmul*' -delete
 	find . -name '*.o' -delete
 #	rm -rf project
 #	rm -rf target

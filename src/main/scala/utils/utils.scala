@@ -53,6 +53,23 @@ package object utils {
         default
       }
     }
+    def parseOpt(
+      longOpt  : String,
+      shortOpt : String,
+      default  : Array[String]
+    ) : Array[String] = {
+      if(argMap.contains(longOpt)) {
+        argMap(longOpt).split(" ")
+      } else if(argMap.contains(shortOpt)) {
+        argMap(shortOpt).split(" ")
+      } else {
+        default
+      }
+    }
+
+    // FIRRTL and chisel parameters
+    val CIRCT_ARGS   = parseOpt("CIRCT_ARGS", "C", Array[String]())
+    val FIRTOOL_ARGS = parseOpt("FIRTOOL_ARGS", "F", Array[String]())
 
     def parseSwitch(
       longSwitch  : String,
