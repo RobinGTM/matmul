@@ -1,0 +1,85 @@
+## OOC synthesis to speed-up processes
+set top_name                 //TOP_NAME//
+set BITSTREAM                //BITSTREAM//
+set M_HEIGHT                 //M_HEIGHT//
+set M_WIDTH                  //M_WIDTH//
+set CHISEL_DIR               //CHISELDIR//
+set DCP_DIR                  //DCP_DIR//
+set RPT_DIR                  //RPT_DIR//
+set PART                     //VIVADO_PART//
+set_param general.maxThreads //NPROC//
+
+read_verilog -sv [glob ${CHISEL_DIR}/hw/*.sv]
+read_ip src/main/ip/xdma/xdma_0.xci
+read_xdc [glob src/main/xdc/*.xdc]
+
+# Synthesis
+# Out-of-context (OOC) synthesize every submodule (especially Worker)
+set ooc_modules \
+{
+  MACWrapper \
+  AsyncFIFOReadPort \
+  AsyncFIFOWritePort \
+  SAXIRW2Full \
+  AXILiteSlaveMCPWrapper \
+  AXIMemory2FIFO \
+  FIFO2AXIMemory \
+  AXIS2FIFO \
+  FIFO2AXIS \
+  MCPCross2RegAdapter \
+  MatMulController
+}
+
+foreach ooc_module ${ooc_modules} {
+  set dcp ${ooc_module}_OOC.dcp
+  synth_design -part ${PART} -top ${ooc_module} -mode out_of_context
+  opt_design
+  # Vivado does this
+  # set_param constraints.enableBinaryConstraints false
+  write_checkpoint -force -noxdef ${DCP_DIR}/${dcp}
+  file mkdir ${RPT_DIR}/${ooc_module}
+  report_utilization -file $RPT_DIR/${ooc_module}/util_synth.rpt \
+    -pb ${RPT_DIR}/${ooc_module}/util_synth.pb
+  add_files -quiet ${DCP_DIR}/${dcp}
+  # Prevent stitching in top-level synthesis
+  set_property used_in_implementation false [get_files ${dcp}]
+}
+
+synth_design -top ${top_name} -part ${PART}
+write_checkpoint -force -noxdef ${DCP_DIR}/${top_name}.dcp
+file mkdir ${RPT_DIR}/${top_name}
+report_utilization -file ${RPT_DIR}/${top_name}/util_synth.rpt \
+  -pb ${RPT_DIR}/${top_name}/util_synth.pb
+
+# Vivado scripts do this and this seems to allow opt_design after
+# link_design
+create_project -in_memory -part ${PART}
+
+# Re-add files
+foreach ooc_module ${ooc_modules} {
+  add_files -quiet ${DCP_DIR}/${ooc_module}_OOC.dcp
+  set_property netlist_only true [get_files ${ooc_module}_OOC.dcp]
+}
+add_files -quiet ${DCP_DIR}/${top_name}.dcp
+
+# Link design (stitch OOC syntheses together)
+link_design -top ${top_name} -part ${PART}
+opt_design
+write_checkpoint -force ${DCP_DIR}/${top_name}_opt.dcp
+
+# Placement
+place_design
+phys_opt_design
+write_checkpoint -force ${DCP_DIR}/${top_name}_placed.dcp
+
+# Routing
+route_design
+phys_opt_design
+write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
+
+# Reports
+report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.txt
+report_timing_summary -file ${RPT_DIR}/post-impl-timing.txt
+
+# Bitstream
+write_bitstream -force ${BITSTREAM}

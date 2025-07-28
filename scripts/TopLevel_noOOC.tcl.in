@@ -1,0 +1,45 @@
+## Non-OOC synthesis to allow more flexible resource allocation
+set top_name                 //TOP_NAME//
+set BITSTREAM                //BITSTREAM//
+set M_HEIGHT                 //M_HEIGHT//
+set M_WIDTH                  //M_WIDTH//
+set CHISEL_DIR               //CHISELDIR//
+set DCP_DIR                  //DCP_DIR//
+set RPT_DIR                  //RPT_DIR//
+set PART                     //VIVADO_PART//
+set_param general.maxThreads //NPROC//
+
+read_verilog -sv [glob ${CHISEL_DIR}/hw/*.sv]
+read_ip src/main/ip/xdma/xdma_0.xci
+read_xdc src/main/xdc/sim_xdma.xdc
+
+# Synth
+synth_design -top ${top_name} -part ${PART}
+write_checkpoint -force -noxdef ${DCP_DIR}/${top_name}.dcp
+file mkdir ${RPT_DIR}/${top_name}
+report_utilization -file ${RPT_DIR}/${top_name}/util_synth.rpt \
+  -pb ${RPT_DIR}/${top_name}/util_synth.pb
+
+# Just to be sure
+add_files -quiet ${DCP_DIR}/${top_name}.dcp
+
+# Opt
+opt_design
+write_checkpoint -force ${DCP_DIR}/${top_name}_opt.dcp
+
+# Placement
+place_design
+phys_opt_design
+write_checkpoint -force ${DCP_DIR}/${top_name}_placed.dcp
+
+# Routing
+route_design
+phys_opt_design
+write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
+
+# Reports
+report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.txt
+report_timing_summary -file ${RPT_DIR}/post-impl-timing.txt
+
+# Bitstream
+write_bitstream -force ${BITSTREAM}
