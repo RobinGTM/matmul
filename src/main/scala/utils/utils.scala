@@ -83,7 +83,7 @@ package object utils {
 
     // Core clock PLL
     val PLL_MULT = parseOpt("PLL_MULT", "xpll", 9)
-    val PLL_DIV  = parseOpt("PLL_DIV", "dpll", 4)
+    val PLL_DIV  = parseOpt("PLL_DIV", "dpll", 10)
 
     // Matrix width (number of workers)
     val M_WIDTH  = parseOpt("M_WIDTH", "w", 16)
