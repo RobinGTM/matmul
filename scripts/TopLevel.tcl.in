@@ -61,7 +61,7 @@ if {
   puts "Found existing top-level dcp, not re-synthesizing top-level \"${top_name}\""
 } else {
   synth_design -top ${top_name} -part ${PART}
-  write_checkpoint -force -noxdef ${DCP_DIR}/${top_name}.dcp
+  write_checkpoint -force -noxdef ${top_dcp}
   file mkdir ${RPT_DIR}/${top_name}
   report_utilization -file ${RPT_DIR}/${top_name}/util_synth.rpt \
     -pb ${RPT_DIR}/${top_name}/util_synth.pb

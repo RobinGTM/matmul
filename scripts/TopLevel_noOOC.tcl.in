@@ -7,6 +7,7 @@ set CHISEL_DIR               //CHISELDIR//
 set DCP_DIR                  //DCP_DIR//
 set RPT_DIR                  //RPT_DIR//
 set PART                     //VIVADO_PART//
+set THIS_SCRIPT              //TCL//
 set_param general.maxThreads //NPROC//
 
 read_verilog -sv [glob ${CHISEL_DIR}/hw/*.sv]
