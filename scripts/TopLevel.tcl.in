@@ -7,6 +7,7 @@ set CHISEL_DIR               //CHISELDIR//
 set DCP_DIR                  //DCP_DIR//
 set RPT_DIR                  //RPT_DIR//
 set PART                     //VIVADO_PART//
+set THIS_SCRIPT              //TCL//
 set_param general.maxThreads //NPROC//
 
 read_verilog -sv [glob ${CHISEL_DIR}/hw/*.sv]
@@ -31,25 +32,40 @@ set ooc_modules \
 }
 
 foreach ooc_module ${ooc_modules} {
-  set dcp ${ooc_module}_OOC.dcp
-  synth_design -part ${PART} -top ${ooc_module} -mode out_of_context
-  opt_design
-  # Vivado does this
-  # set_param constraints.enableBinaryConstraints false
-  write_checkpoint -force -noxdef ${DCP_DIR}/${dcp}
-  file mkdir ${RPT_DIR}/${ooc_module}
-  report_utilization -file $RPT_DIR/${ooc_module}/util_synth.rpt \
-    -pb ${RPT_DIR}/${ooc_module}/util_synth.pb
-  add_files -quiet ${DCP_DIR}/${dcp}
+  set dcp ${DCP_DIR}/${ooc_module}_OOC.dcp
+  if {
+    ([ file exist ${dcp} ] == 1) &&
+    ([ file mtime ${dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
+  } {
+    puts "Found existing dcp, not re-synthesizing \"${ooc_module}\""
+  } else {
+    synth_design -part ${PART} -top ${ooc_module} -mode out_of_context
+    opt_design
+    # Vivado does this
+    # set_param constraints.enableBinaryConstraints false
+    write_checkpoint -force -noxdef ${dcp}
+    file mkdir ${RPT_DIR}/${ooc_module}
+    report_utilization -file $RPT_DIR/${ooc_module}/util_synth.rpt \
+      -pb ${RPT_DIR}/${ooc_module}/util_synth.pb
+  }
+  add_files -quiet ${dcp}
   # Prevent stitching in top-level synthesis
   set_property used_in_implementation false [get_files ${dcp}]
 }
 
-synth_design -top ${top_name} -part ${PART}
-write_checkpoint -force -noxdef ${DCP_DIR}/${top_name}.dcp
-file mkdir ${RPT_DIR}/${top_name}
-report_utilization -file ${RPT_DIR}/${top_name}/util_synth.rpt \
-  -pb ${RPT_DIR}/${top_name}/util_synth.pb
+set top_dcp ${DCP_DIR}/${top_name}.dcp
+if {
+  ([ file exist ${top_dcp} ] == 1) &&
+  ([ file mtime ${top_dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
+} {
+  puts "Found existing top-level dcp, not re-synthesizing top-level \"${top_name}\""
+} else {
+  synth_design -top ${top_name} -part ${PART}
+  write_checkpoint -force -noxdef ${DCP_DIR}/${top_name}.dcp
+  file mkdir ${RPT_DIR}/${top_name}
+  report_utilization -file ${RPT_DIR}/${top_name}/util_synth.rpt \
+    -pb ${RPT_DIR}/${top_name}/util_synth.pb
+}
 
 # Vivado scripts do this and this seems to allow opt_design after
 # link_design
@@ -60,12 +76,21 @@ foreach ooc_module ${ooc_modules} {
   add_files -quiet ${DCP_DIR}/${ooc_module}_OOC.dcp
   set_property netlist_only true [get_files ${ooc_module}_OOC.dcp]
 }
-add_files -quiet ${DCP_DIR}/${top_name}.dcp
+add_files -quiet ${top_dcp}
 
 # Link design (stitch OOC syntheses together)
-link_design -top ${top_name} -part ${PART}
-opt_design
-write_checkpoint -force ${DCP_DIR}/${top_name}_opt.dcp
+set linked_dcp ${DCP_DIR}/${top_name}_opt.dcp
+if {
+  ([ file exist ${linked_dcp} ] == 1) &&
+  ([ file mtime ${linked_dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
+} {
+  puts "Found linked design dcp, not re-linking"
+  add_files ${linked_dcp}
+} else {
+  link_design -top ${top_name} -part ${PART}
+  opt_design
+  write_checkpoint -force ${linked_dcp}
+}
 
 # Placement
 place_design
