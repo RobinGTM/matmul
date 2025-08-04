@@ -81,12 +81,15 @@ endif
 # Compilation script location
 TCL            := $(CHISELDIR)/$(notdir $(TCL_TEMPLATE:%.in=%))
 # Vivado checkpoints
-DCP_DIR         = $(CHISELDIR)/dcp
+DCP             = dcp
+DCP_DIR        := $(CHISELDIR)/$(DCP)
 # Vivado reports
-RPT_DIR         = $(CHISELDIR)/rpt
+RPT             = rpt
+RPT_DIR        := $(CHISELDIR)/$(RPT)
 # Vivado logs
-LOG_DIR         = $(CHISELDIR)/log
-BITSTREAM      := $(CHISELDIR)/hw/$(TOP_NAME).bit
+LOG             = log
+LOG_DIR        := $(CHISELDIR)/$(LOG)
+BITSTREAM      := $(CHISELDIR)/$(TOP_NAME).bit
 # Defaults to Alveo U200
 VIVADO_PART     = xcu200-fsgd2104-2-e
 
@@ -107,7 +110,10 @@ help:
 	@echo "Set OOC to 0 (or anything other than 1) to disable \
 	out-of-context synthesis"
 
-$(SYSTEMVERILOG):
+$(CHISELDIR):
+	mkdir -p $(CHISELDIR)
+
+$(SYSTEMVERILOG): $(CHISELDIR)
 	sbt --batch --color=always --mem $(SBT_MEM) $(SBT_RUN_CMD)
 .PHONY: hw
 hw: $(SYSTEMVERILOG)
@@ -116,14 +122,14 @@ $(OBJDIR)/%.o: $(CSRCDIR)/%.c $(SYSTEMVERILOG)
 	@mkdir -p $(OBJDIR)
 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) -c -o $@ $<
 
-$(EXE): $(OBJS) $(SYSTEMVERILOG)
+$(EXE): $(OBJS) $(SYSTEMVERILOG) $(CHISELDIR)
 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) \
 	  -o $@ $(OBJDIR)/*.o
 .PHONY: host
 host: $(EXE)
 
 VAR_LIST := $(shell sed -rn 's#^[^/]*//([^/]+)//$$#\1#p' $(TCL_TEMPLATE))
-$(TCL):
+$(TCL): $(CHISELDIR)
 	rm -f $(TCL)
 	cp $(TCL_TEMPLATE) $(TCL)
 	@$(foreach var,$(VAR_LIST), \
