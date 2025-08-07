@@ -9,9 +9,21 @@ classical RTL design techniques to Chisel.
 The `matmul` repo is open-source and shipped with
 [this](link_to_be_added) article proposal.
 
+# Details and kudos
+
+`MatMul` can use two different floating point arithmetic packages :
+- a self-aligned format (SAF) for float computations, based on [Tarek Ould-Bachir and
+  Jean-Pierre David's article](https://doi.org/10.1145/2457443.2457444) on the
+  subject. A big part of the SAF-IEEE754 conversions and SAF computations were
+  stolen from [CuFP](https://github.com/FahimeHajizadeh/Custom-Float-HLS.git).
+- Berkeley's [`hardfloat`](https://github.com/ucb-bar/berkeley-hardfloat)
+  Chisel package which uses an custom internal recoded floating point format.
+
+The VCD generation hack was taken on [edwardcwang's
+repo](https://github.com/edwardcwang/decoupled-serializer).
+
 # Usage
 ## Building the project
-
 ### Dependencies
 - openjdk17
 - sbt
@@ -20,13 +32,16 @@ The `matmul` repo is open-source and shipped with
 - Vivado 2024.1
 - make
 
-### Building
+### Build
 - Build the Chisel project:
 `make [VAR=VAL...] hw`
 - Build the host code:
 `make [VAR=VAL...] host`
 - Build the bitstream
 `make [VAR=VAL...] bitstream`
+
+Refer to the (Make variables)[#make-variables] section to customize
+the build.
 
 ### Make variables
 Several `make` variables are exposed to allow you to customize the
@@ -53,20 +68,57 @@ build:
 | `SBT_MEM`       | 65535                 | Amount of memory to lend to SBT                                                                 |
 | `EXE_NAME`      | `matmul-host`         | Name of the output host executable                                                              |
 
+## Running the project
+### Flashing the board
+The Alveo board's JTAG USB port must be plugged to one of the host's
+USB ports. Also, __Vivado's [cable drivers](
+https://docs.amd.com/r/en-US/ug973-vivado-release-notes-install-license/Installing-Cable-Drivers
+) must be installed__.
 
+Once the bistream has been built, it can be flashed using the
+convenience script `scripts/flash.sh`. Just call it passing the
+bitstream path as argument:
+```
+./scripts/flash.sh <path_to_bitstream>/TopLevel.bit
+```
+_This script has only been tested on one machine, the bitstream can be
+flashed using the Vivado GUI if the script doesn't work._
 
-# Details and kudos
+The host will probably need a **hot restart** to correctly rescan the
+PCIe bus. To do so, just type `sudo reboot` in a terminal. Don't
+unplug or turn off the board or the host's power supply in order to
+keep the Alveo powered and prevent it from losing its configuration.
 
-`MatMul` can use two different floating point arithmetic packages :
-- a self-aligned format (SAF) for float computations, based on [Tarek Ould-Bachir and
-  Jean-Pierre David's article](https://doi.org/10.1145/2457443.2457444) on the
-  subject. A big part of the SAF-IEEE754 conversions and SAF computations were
-  stolen from [CuFP](https://github.com/FahimeHajizadeh/Custom-Float-HLS.git).
-- Berkeley's [`hardfloat`](https://github.com/ucb-bar/berkeley-hardfloat)
-  Chisel package which uses an custom internal recoded floating point format.
+### Running the host code
+Note that since `/dev` belongs to `root`, running the host code
+requires root priviledges, or setting up a udev rule to allow the user
+to interact with the `/dev/xdma0_*` device files.
 
-The VCD generation hack was taken on [edwardcwang's
-repo](https://github.com/edwardcwang/decoupled-serializer).
+Once the bitstream has been flashed, the hardware can be checked
+with
+```
+# ./$(BUILDDIR)/$(CHISEL_OUTDIR)/sw/matmul-host -w
+```
+This command should ask the matrix's size and the floating point
+implementation used to the `matmul` hardware, and print this
+information formatted as "`<MH>x<MW>_<FLT>`". For example, the default
+configuration yields `16x16_saf`.
+
+The article's benchmark results can be reproduced using this
+executable.
+
+### Host executable flags
+
+All toggle flags are disabled by default.
+
+| FLAG       | DEFAULT <arg> | DESCRIPTION                                             |
+| `-m <arg>` | 1             | Number of different matrices to generate                |
+| `-n <arg>` | 1             | Number of different vectors to generate for each matrix |
+| `-s <arg>` | `time(NULL)`  | Random seed                                             |
+| `-w`       | -             | Read hardware info in hardware, print it and exit       |
+| `-d`       | -             | Dry-run: don't use hardware, just print matrices        |
+| `-p`       | -             | Print result vectors while benchmarking                 |
+| `-h`       | -             | Print help                                              |
 
 # Work in progress (that will probably never be done)
 
