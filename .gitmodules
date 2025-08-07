@@ -1,3 +1,6 @@
 [submodule "external/berkeley-hardfloat"]
 	path = external/berkeley-hardfloat
 	url = https://github.com/ucb-bar/berkeley-hardfloat.git
+[submodule "external/decoupled-serializer"]
+	path = external/decoupled-serializer
+	url = https://github.com/RobinGTM/decoupled-serializer.git
