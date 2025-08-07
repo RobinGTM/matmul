@@ -49,7 +49,7 @@ Tested commit: `0b9793ec13cab9c7631910e7f911713b68b272ed`
 - Build the bitstream
 `make [VAR=VAL...] bitstream`
 
-Refer to the (Make variables)[#make-variables] section to customize
+Refer to the [Make variables](#make-variables) section to customize
 the build.
 
 ### Make variables
