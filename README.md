@@ -1,13 +1,13 @@
 # `matmul`
 
-A simple matrix multiplier for AMD / Xilinx Alveo boards fully written
-in Chisel. This is a proof-of-concept to demonstrate a Vitis-less,
-RTL-only flow written in Chisel that fully exploits the available
-resources on the Alveo boards, enables multi-clock designs and applies
-classical RTL design techniques to Chisel.
+`matmul` is a simple matrix multiplier for AMD / Xilinx Alveo boards
+fully written in Chisel. This is a proof-of-concept to demonstrate a
+Vitis-less, RTL-only flow written in Chisel that fully exploits the
+available resources on the Alveo boards, enables multi-clock designs
+and applies advanced RTL design techniques to Chisel.
 
-The `matmul` repo is open-source and shipped with
-[this](link_to_be_added) article proposal.
+The `matmul` repo is open-source (GPL3) and shipped with
+[this](link_to_be_added) article submission.
 
 # Details and kudos
 
@@ -27,12 +27,21 @@ repo](https://github.com/edwardcwang/decoupled-serializer).
 ### Dependencies
 - openjdk17
 - sbt
-- gcc
 - C libs: GSL with CBLAS support
 - Vivado 2024.1
+- Xilinx's [`dma_ip_drivers`](https://github.com/Xilinx/dma_ip_drivers.git)
+- gcc
 - make
 
-### Build
+### Building `dma_ip_drivers`
+Clone the
+[`dma_ip_drivers`](https://github.com/Xilinx/dma_ip_drivers.git)
+repository and build the kernel module (refer to the README and pull
+requests / issues).
+
+Tested commit: `0b9793ec13cab9c7631910e7f911713b68b272ed`
+
+### Building `matmul`
 - Build the Chisel project:
 `make [VAR=VAL...] hw`
 - Build the host code:
@@ -109,7 +118,8 @@ executable.
 
 ### Host executable flags
 
-All toggle flags are disabled by default.
+All toggle flags (with "-" in the default value column) are disabled
+by default.
 
 | FLAG       | DEFAULT <arg> | DESCRIPTION                                             |
 | `-m <arg>` | 1             | Number of different matrices to generate                |
@@ -122,4 +132,8 @@ All toggle flags are disabled by default.
 
 # Work in progress (that will probably never be done)
 
-- `MatMul` doesn't handle float over/underflow or NaNs
+- The SAF implementation doesn't handle float over/underflow or NaNs
+- The SAF implementation doesn't handle rounding or error conditions
+- The core processing element pipeline cannot stall: the output FIFO
+  must have enough space for outgoing data when sending a vector, or
+  the hardware may enter an unpredictible state
