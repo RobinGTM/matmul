@@ -27,6 +27,7 @@ class SAFMACTest(
   safMac.io.i_a   := expandF32(io.i_a)
   safMac.io.i_b   := expandF32(io.i_b)
   safMac.io.i_acc := io.i_acc
+  safMac.io.i_rst := io.i_rst
 
   io.o_res := restoreF32(safMac.io.o_res)
   o_saf    := safMac.o_saf
@@ -42,6 +43,8 @@ class SAFMACSpec extends AnyFlatSpec with Matchers {
         println(uut.io.o_res.peek())
         println(uut.o_saf.peek())
       }
+
+      uut.io.i_rst.poke(0)
 
       // -1 * 15.99999
       uut.io.i_a.poke(0xbf800000)
