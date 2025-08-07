@@ -1,9 +1,10 @@
-/* BUFG.scala -- BUFG black-box
+/* MultiCyclePath.scala -- A test module for the MCP sources and
+ *                         destinations
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
  * This file is part of matmul.
- *
+ * 
  * matmul is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,16 +18,28 @@
  * You should have received a copy of the GNU General Public License
  * along with matmul. If not, see <https://www.gnu.org/licenses/>.
  */
-package matmul.blackboxes
+package mcp
 
-// Chisel
 import chisel3._
 import chisel3.util._
-import chisel3.experimental._
 
-class BUFG extends BlackBox {
-  val io = IO(new Bundle {
-    val O = Output(Clock())
-    val I = Input(Clock())
-  })
+// Local
+import mcp.interfaces.MultiCyclePathInterface
+
+// Only for testing
+class MultiCyclePath[T <: Data](dType: T = UInt(32.W)) extends RawModule {
+  // MCP I/O
+  val i_clka = IO(Input(Clock()))
+  val i_rsta = IO(Input(Bool()))
+  val i_clkb = IO(Input(Clock()))
+  val i_rstb = IO(Input(Bool()))
+  val io = IO(new MultiCyclePathInterface(dType))
+
+  // Source domain
+  val mcpSrc = withClockAndReset(i_clka, i_rsta) { Module(new MultiCyclePathSrc) }
+  val mcpDst = withClockAndReset(i_clkb, i_rstb) { Module(new MultiCyclePathDst) }
+
+  mcpSrc.io_cross <> mcpDst.io_cross
+  mcpSrc.io_src   <> io.src
+  io.dst          <> mcpDst.io_dst
 }

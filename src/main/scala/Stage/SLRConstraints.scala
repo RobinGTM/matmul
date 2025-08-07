@@ -1,3 +1,23 @@
+/* SLRConstrants.scala -- XDC constraint generator for SLR placement
+ *                        (unused)
+ *
+ * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
+ *
+ * This file is part of matmul.
+ *
+ * matmul is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * matmul is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with matmul. If not, see <https://www.gnu.org/licenses/>.
+ */
 package matmul.stage
 
 import collection.mutable.Queue
@@ -78,7 +98,7 @@ class SLRConstraints(param : Parameters, model : String = "u200") {
 
     for(blk <- 0 to nBlk - 1) {
       slrAssignments(currSlr) = slrAssignments(currSlr) :+ blk
-      if(((currSlr != nSlr - 1) && (currSlr != 0) && 
+      if(((currSlr != nSlr - 1) && (currSlr != 0) &&
         slrAssignments(currSlr).length == blksPerSlr(currSlr) / 2) ||
         slrAssignments(currSlr).length == blksPerSlr(currSlr)
       ) {

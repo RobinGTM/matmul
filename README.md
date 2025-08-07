@@ -25,12 +25,12 @@ repo](https://github.com/edwardcwang/decoupled-serializer).
 # Usage
 ## Building the project
 ### Dependencies
-- openjdk17
-- sbt
+- OpenJDK17
+- SBT (Scala Build Tool)
 - C libs: GSL with CBLAS support
 - Vivado 2024.1
 - Xilinx's [`dma_ip_drivers`](https://github.com/Xilinx/dma_ip_drivers.git)
-- gcc
+- GCC
 - make
 
 ### Building `dma_ip_drivers`
@@ -42,12 +42,11 @@ requests / issues).
 Tested commit: `0b9793ec13cab9c7631910e7f911713b68b272ed`
 
 ### Building `matmul`
-- Build the Chisel project:
-`make [VAR=VAL...] hw`
-- Build the host code:
-`make [VAR=VAL...] host`
-- Build the bitstream
-`make [VAR=VAL...] bitstream`
+- Build the Chisel project: `make [VAR=VAL...] hw`
+- Build the host code: `make [VAR=VAL...] host`
+- Build the bitstream: `make [VAR=VAL...] bitstream`
+- All at once: `make [VAR=VAL...] all`
+Note that the default target is equivalent to `make host`.
 
 Refer to the [Make variables](#make-variables) section to customize
 the build.
@@ -56,23 +55,23 @@ the build.
 Several `make` variables are exposed to allow you to customize the
 build:
 
-| VAR             | Default value         | Description                                                                                     |
-|-----------------|-----------------------|-------------------------------------------------------------------------------------------------|
-| `BUILDDIR`      | `build`               | Top-level build directory                                                                       |
-| `CHISEL_OUTDIR` | `CHISEL_OUTDIR`       | Chisel outputs directory (under `$(BUILDDIR)`/)                                                 |
-| `M_HEIGHT`      | 16                    | Matrix height (number of PE)                                                                    |
-| `M_WIDTH`       | 16                    | Matrix width (PE memory size)                                                                   |
-| `FLOAT`         | `saf`                 | Float implementation (`saf` or `hardfloat`)                                                     |
-| `PLL_MULT`      | 9                     | Multiplication coefficient for the base frequency (156.25)                                      |
-| `PLL_DIV`       | 10                    | Division coefficient for the base frequency (156.25)                                            |
-| `OOC`           | 1                     | Enable (1) or disable (0) Vivado out-of-context synthesis                                       |
-| `DCP`           | dcp                   | Name of the subdirectory of `$(BUILDDIR)/$(CHISEL_OUTDIR)` that will contain design checkpoints |
-| `RPT`           | rpt                   | ... Vivado reports                                                                              |
-| `LOG`           | log                   | ... Vivado logs                                                                                 |
-| `VIVADO_PART`   | `xcu200-fsgd2104-2-e` | Vivado part (the default is the only one tested and XDMA is configured for it)                  |
-| `NRPOC`         | `$(nproc)`            | Number of processors to use                                                                     |
-| `SBT_MEM`       | 65535                 | Amount of memory to lend to SBT                                                                 |
-| `EXE_NAME`      | `matmul-host`         | Name of the output host executable                                                              |
+| VAR             | Default value                       | Description                                                                                     |
+|-----------------|-------------------------------------|-------------------------------------------------------------------------------------------------|
+| `BUILDDIR`      | build                               | Top-level build directory                                                                       |
+| `CHISEL_OUTDIR` | matmul-<MH>x<MW>_<FLOAT>-<FREQ_MHZ> | Chisel outputs directory (under `$(BUILDDIR)`/)                                                 |
+| `M_HEIGHT`      | 16                                  | Matrix height (number of PE)                                                                    |
+| `M_WIDTH`       | 16                                  | Matrix width (PE memory size)                                                                   |
+| `FLOAT`         | saf                                 | Float implementation (`saf` or `hardfloat`)                                                     |
+| `PLL_MULT`      | 9                                   | Multiplication coefficient for the base frequency (156.25)                                      |
+| `PLL_DIV`       | 10                                  | Division coefficient for the base frequency (156.25)                                            |
+| `OOC`           | 1                                   | Enable (1) or disable (0) Vivado out-of-context synthesis                                       |
+| `DCP`           | dcp                                 | Name of the subdirectory of `$(BUILDDIR)/$(CHISEL_OUTDIR)` that will contain design checkpoints |
+| `RPT`           | rpt                                 | Same as above for Vivado reports                                                                |
+| `LOG`           | log                                 | Same as above for Vivado logs                                                                   |
+| `VIVADO_PART`   | `xcu200-fsgd2104-2-e`               | Vivado part (the default is the only one tested and the XDMA IP is configured for it)           |
+| `NRPOC`         | `$(nproc)`                          | Number of processors to use                                                                     |
+| `SBT_MEM`       | 65535                               | Amount of memory to lend to SBT                                                                 |
+| `EXE_NAME`      | matmul-host                         | Name of the output host executable                                                              |
 
 
 ## Running the project
@@ -101,10 +100,10 @@ Note that since `/dev` belongs to `root`, running the host code
 requires root priviledges, or setting up a udev rule to allow the user
 to interact with the `/dev/xdma0_*` device files.
 
-Once the bitstream has been flashed, the hardware can be checked
-with
+Once the bitstream has been flashed and the PCIe rescanned, the
+hardware can be checked with
 ```
-# ./$(BUILDDIR)/$(CHISEL_OUTDIR)/sw/matmul-host -w
+shell# ./$(BUILDDIR)/$(CHISEL_OUTDIR)/sw/matmul-host -w
 ```
 This command should ask the matrix's size and the floating point
 implementation used to the `matmul` hardware, and print this
@@ -112,7 +111,8 @@ information formatted as "`<MH>x<MW>_<FLT>`". For example, the default
 configuration yields `16x16_saf`.
 
 The article's benchmark results can be reproduced using this
-executable.
+executable. See the [next section](#host-executable-flags) for
+available parameters and options.
 
 ### Host executable flags
 
