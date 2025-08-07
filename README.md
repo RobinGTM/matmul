@@ -56,26 +56,27 @@ the build.
 Several `make` variables are exposed to allow you to customize the
 build:
 
-| VAR             | DEFAULT VALUE         | DESCRIPTION                                                                                     |
-|-----------------|-----------------------|-------------------------------------------------------------------------------------------------|
+| VAR             | Default value         | Description                                                                                     |
+|-----------------+-----------------------+-------------------------------------------------------------------------------------------------|
 | `BUILDDIR`      | `build`               | Top-level build directory                                                                       |
 | `CHISEL_OUTDIR` | `CHISEL_OUTDIR`       | Chisel outputs directory (under `$(BUILDDIR)`/)                                                 |
-|-----------------|-----------------------|-------------------------------------------------------------------------------------------------|
+|-----------------+-----------------------+-------------------------------------------------------------------------------------------------|
 | `M_HEIGHT`      | 16                    | Matrix height (number of PE)                                                                    |
 | `M_WIDTH`       | 16                    | Matrix width (PE memory size)                                                                   |
 | `FLOAT`         | `saf`                 | Float implementation (`saf` or `hardfloat`)                                                     |
 | `PLL_MULT`      | 9                     | Multiplication coefficient for the base frequency (156.25)                                      |
 | `PLL_DIV`       | 10                    | Division coefficient for the base frequency (156.25)                                            |
-|-----------------|-----------------------|-------------------------------------------------------------------------------------------------|
+|-----------------+-----------------------+-------------------------------------------------------------------------------------------------|
 | `OOC`           | 1                     | Enable (1) or disable (0) Vivado out-of-context synthesis                                       |
 | `DCP`           | dcp                   | Name of the subdirectory of `$(BUILDDIR)/$(CHISEL_OUTDIR)` that will contain design checkpoints |
 | `RPT`           | rpt                   | ... Vivado reports                                                                              |
 | `LOG`           | log                   | ... Vivado logs                                                                                 |
 | `VIVADO_PART`   | `xcu200-fsgd2104-2-e` | Vivado part (the default is the only one tested and XDMA is configured for it)                  |
-|-----------------|-----------------------|-------------------------------------------------------------------------------------------------|
+|-----------------+-----------------------+-------------------------------------------------------------------------------------------------|
 | `NRPOC`         | `$(nproc)`            | Number of processors to use                                                                     |
 | `SBT_MEM`       | 65535                 | Amount of memory to lend to SBT                                                                 |
 | `EXE_NAME`      | `matmul-host`         | Name of the output host executable                                                              |
+
 
 ## Running the project
 ### Flashing the board
@@ -121,7 +122,8 @@ executable.
 All toggle flags (with "-" in the default value column) are disabled
 by default.
 
-| FLAG       | DEFAULT <arg> | DESCRIPTION                                             |
+| Flag       | Default <arg> | Description                                             |
+|------------|---------------|---------------------------------------------------------|
 | `-m <arg>` | 1             | Number of different matrices to generate                |
 | `-n <arg>` | 1             | Number of different vectors to generate for each matrix |
 | `-s <arg>` | `time(NULL)`  | Random seed                                             |
@@ -137,3 +139,9 @@ by default.
 - The core processing element pipeline cannot stall: the output FIFO
   must have enough space for outgoing data when sending a vector, or
   the hardware may enter an unpredictible state
+
+# Copyright notice
+This project is released under the GNU GPL3 (see
+[LICENSE](./LICENSE)).
+
+(C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
