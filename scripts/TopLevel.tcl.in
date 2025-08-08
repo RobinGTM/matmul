@@ -18,7 +18,7 @@ read_xdc [glob src/main/xdc/*.xdc]
 # Out-of-context (OOC) synthesize every submodule (especially Worker)
 set ooc_modules \
 {
-  MACWrapper \
+  Worker \
   AsyncFIFOReadPort \
   AsyncFIFOWritePort \
   SAXIRW2Full \
@@ -45,7 +45,7 @@ foreach ooc_module ${ooc_modules} {
     # set_param constraints.enableBinaryConstraints false
     write_checkpoint -force -noxdef ${dcp}
     file mkdir ${RPT_DIR}/${ooc_module}
-    report_utilization -file $RPT_DIR/${ooc_module}/util_synth.rpt \
+    report_utilization -hierarchical -file $RPT_DIR/${ooc_module}/util_synth.rpt \
       -pb ${RPT_DIR}/${ooc_module}/util_synth.pb
   }
   add_files -quiet ${dcp}
@@ -63,7 +63,7 @@ if {
   synth_design -top ${top_name} -part ${PART}
   write_checkpoint -force -noxdef ${top_dcp}
   file mkdir ${RPT_DIR}/${top_name}
-  report_utilization -file ${RPT_DIR}/${top_name}/util_synth.rpt \
+  report_utilization -hierarchical -file ${RPT_DIR}/${top_name}/util_synth.rpt \
     -pb ${RPT_DIR}/${top_name}/util_synth.pb
 }
 
@@ -103,8 +103,8 @@ phys_opt_design
 write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
 
 # Reports
-report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.txt
-report_timing_summary -file ${RPT_DIR}/post-impl-timing.txt
+report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.rpt
+report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
 
 # Bitstream
 write_bitstream -force ${BITSTREAM}

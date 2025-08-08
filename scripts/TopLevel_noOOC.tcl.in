@@ -18,7 +18,7 @@ read_xdc src/main/xdc/sim_xdma.xdc
 synth_design -top ${top_name} -part ${PART}
 write_checkpoint -force -noxdef ${DCP_DIR}/${top_name}.dcp
 file mkdir ${RPT_DIR}/${top_name}
-report_utilization -file ${RPT_DIR}/${top_name}/util_synth.rpt \
+report_utilization -hierarchical -file ${RPT_DIR}/${top_name}/util_synth.rpt \
   -pb ${RPT_DIR}/${top_name}/util_synth.pb
 
 # Just to be sure
@@ -39,8 +39,8 @@ phys_opt_design
 write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
 
 # Reports
-report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.txt
-report_timing_summary -file ${RPT_DIR}/post-impl-timing.txt
+report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.rpt
+report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
 
 # Bitstream
 write_bitstream -force ${BITSTREAM}
