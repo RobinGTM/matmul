@@ -59,6 +59,7 @@ if {
   ([ file mtime ${top_dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
 } {
   puts "Found existing top-level dcp, not re-synthesizing top-level \"${top_name}\""
+  open_checkpoint ${top_dcp}
 } else {
   synth_design -top ${top_name} -part ${PART}
   write_checkpoint -force -noxdef ${top_dcp}
@@ -86,6 +87,7 @@ if {
 } {
   puts "Found linked design dcp, not re-linking"
   add_files ${linked_dcp}
+  open_checkpoint ${linked_dcp}
 } else {
   link_design -top ${top_name} -part ${PART}
   opt_design
