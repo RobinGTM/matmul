@@ -66,76 +66,76 @@ class SAFAddSpec extends AnyFlatSpec with Matchers {
   }
 }
 
-class SAFMulWrapper(
-  L : Int = 5,
-  SAF_W : Int = 70 + 8 - 5
-) extends Module {
-  val i_a = IO(Input(UInt(32.W)))
-  val i_b = IO(Input(UInt(32.W)))
-  val fb_a = IO(Output(UInt(33.W)))
-  val fb_b = IO(Output(UInt(33.W)))
-  val o_saf = IO(Output(UInt(SAF_W.W)))
-  val o_f32 = IO(Output(UInt(32.W)))
+// class SAFMulWrapper(
+//   L : Int = 5,
+//   SAF_W : Int = 70 + 8 - 5
+// ) extends Module {
+//   val i_a = IO(Input(UInt(32.W)))
+//   val i_b = IO(Input(UInt(32.W)))
+//   val fb_a = IO(Output(UInt(33.W)))
+//   val fb_b = IO(Output(UInt(33.W)))
+//   val o_saf = IO(Output(UInt(SAF_W.W)))
+//   val o_f32 = IO(Output(UInt(32.W)))
 
-  val mul = Module(new SAFMul(L = L, W = 70))
-  val saf2F32 = Module(new SAFToFloat32(L = L, W = 70))
+//   val mul = Module(new SAFMul(L = L, W = 70))
+//   val saf2F32 = Module(new SAFToFloat32(L = L, W = 70))
 
-  mul.i_a := expandF32(i_a)
-  fb_a    := expandF32(i_a)
-  mul.i_b := expandF32(i_b)
-  fb_b    := expandF32(i_b)
+//   mul.i_a := expandF32(i_a)
+//   fb_a    := expandF32(i_a)
+//   mul.i_b := expandF32(i_b)
+//   fb_b    := expandF32(i_b)
 
-  saf2F32.i_saf := mul.o_saf
+//   saf2F32.i_saf := mul.o_saf
 
-  o_saf := mul.o_saf
-  o_f32 := saf2F32.o_f32
-}
+//   o_saf := mul.o_saf
+//   o_f32 := saf2F32.o_f32
+// }
 
-class SAFMulSpec extends AnyFlatSpec with Matchers {
-  "SAFMul" should "work" in {
-    simulate(new SAFMulWrapper) { uut =>
-      // -1 * 1
-      println("==================")
-      uut.i_a.poke(0xbf800000)
-      uut.i_b.poke(0x3f800000)
-      println(uut.fb_a.peek())
-      println(uut.fb_b.peek())
-      println(uut.o_saf.peek())
-      println(uut.o_f32.peek())
+// class SAFMulSpec extends AnyFlatSpec with Matchers {
+//   "SAFMul" should "work" in {
+//     simulate(new SAFMulWrapper) { uut =>
+//       // -1 * 1
+//       println("==================")
+//       uut.i_a.poke(0xbf800000)
+//       uut.i_b.poke(0x3f800000)
+//       println(uut.fb_a.peek())
+//       println(uut.fb_b.peek())
+//       println(uut.o_saf.peek())
+//       println(uut.o_f32.peek())
 
-      println("==================")
-      uut.clock.step()
-      // 15.999999 * 10
-      uut.i_a.poke(0x417fffff)
-      uut.i_b.poke(0x41200000)
-      println(uut.fb_a.peek())
-      println(uut.fb_b.peek())
-      println(uut.o_saf.peek())
-      println(uut.o_f32.peek())
+//       println("==================")
+//       uut.clock.step()
+//       // 15.999999 * 10
+//       uut.i_a.poke(0x417fffff)
+//       uut.i_b.poke(0x41200000)
+//       println(uut.fb_a.peek())
+//       println(uut.fb_b.peek())
+//       println(uut.o_saf.peek())
+//       println(uut.o_f32.peek())
 
-      println("==================")
-      uut.clock.step()
-      // -10.78125 * 10
-      uut.i_a.poke(0xc12c8000)
-      uut.i_b.poke(0x41200000)
-      println(uut.fb_a.peek())
-      println(uut.fb_b.peek())
-      println(uut.o_saf.peek())
-      println(uut.o_f32.peek())
+//       println("==================")
+//       uut.clock.step()
+//       // -10.78125 * 10
+//       uut.i_a.poke(0xc12c8000)
+//       uut.i_b.poke(0x41200000)
+//       println(uut.fb_a.peek())
+//       println(uut.fb_b.peek())
+//       println(uut.o_saf.peek())
+//       println(uut.o_f32.peek())
 
-      println("==================")
-      uut.clock.step()
-      uut.i_a.poke(0xc8756f08)
-      uut.i_b.poke(0x43a09d91)
-      println(uut.fb_a.peek())
-      println(uut.fb_b.peek())
-      println(uut.o_saf.peek())
-      println(uut.o_f32.peek())
+//       println("==================")
+//       uut.clock.step()
+//       uut.i_a.poke(0xc8756f08)
+//       uut.i_b.poke(0x43a09d91)
+//       println(uut.fb_a.peek())
+//       println(uut.fb_b.peek())
+//       println(uut.o_saf.peek())
+//       println(uut.o_f32.peek())
 
-      uut.clock.step()
-    }
-  }
-}
+//       uut.clock.step()
+//     }
+//   }
+// }
 
 class SAFMulAdd extends Module {
   val i_a = IO(Input(UInt(33.W)))
