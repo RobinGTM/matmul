@@ -25,7 +25,8 @@ import chisel3.util._
 import hardfloat._
 
 class HardMAC(
-  DW : Int = 33
+  DW                : Int = 33,
+  DSP_PIPELINE_REGS : Int = 2
 ) extends Module {
   /* I/O */
   val io = IO(new MACInterface(DW))
@@ -46,12 +47,20 @@ class HardMAC(
   hardMul.io.a := io.i_a
   hardMul.io.b := io.i_b
 
-  macReg := hardMul.io.out
+  val dspPipelineRegs = RegInit(VecInit(
+    Seq.fill(DSP_PIPELINE_REGS)(0.U.asTypeOf(hardMul.io.out))
+  ))
+  dspPipelineRegs(0) := hardMul.io.out
+  for(i <- 1 to DSP_PIPELINE_REGS - 1) {
+    dspPipelineRegs(i) := dspPipelineRegs(i - 1)
+  }
+
+  macReg := dspPipelineRegs(DSP_PIPELINE_REGS - 1)
 
   hardAdder.io.a := macReg
   hardAdder.io.b := accReg
 
-  when(RegNext(io.i_acc)) {
+  when(RegNext(RegNext(RegNext(io.i_acc)))) {
     accReg := hardAdder.io.out
   }
 

@@ -1,0 +1,6 @@
+- Wrap SAF/hard adders in single adder
+- same for muls
+- rework MAC
+- pipeline DSPs / workers / worker chain
+- test and validate
+- 300MHz!!!!!!!!!!!!!

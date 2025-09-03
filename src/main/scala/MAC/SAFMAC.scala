@@ -26,9 +26,10 @@ import saf._
 import saf.utils._
 
 class SAFMAC(
-  DW  : Int = 33,
-  L   : Int = 5,
-  W   : Int = 70
+  DW                : Int = 33,
+  L                 : Int = 5,
+  W                 : Int = 70,
+  DSP_PIPELINE_REGS : Int = 2
 ) extends Module {
   private val SAF_WIDTH = W + 8 - L
   /* I/O */
@@ -49,12 +50,12 @@ class SAFMAC(
   safMul.i_a := io.i_a
   safMul.i_b := io.i_b
 
-  macReg := safMul.o_saf
+  macReg := RegNext(RegNext(safMul.o_saf))
 
   safAdder.i_safA := macReg
   safAdder.i_safB := accReg
 
-  when(RegNext(io.i_acc)) {
+  when(RegNext(RegNext(RegNext(io.i_acc)))) {
     accReg := safAdder.o_res
   }
 

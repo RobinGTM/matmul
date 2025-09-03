@@ -1,6 +1,4 @@
-/* MACWrapper.scala -- MAC wrapper that facilitates abstraction of the
- *                     low-level float implementation to higher-level
- *                     modules
+/* SAFAdder.scala -- SAF or hardfloat adder wrapper
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
@@ -24,30 +22,30 @@ package mac
 import chisel3._
 import chisel3.util._
 
-import hardfloat._
-import saf._
+import mac.interfaces._
 
-class MACWrapper(
-  USE_HARDFLOAT     : Boolean = false,
-  DW                : Int = 33,
-  SAF_L             : Int = 5,
-  SAF_W             : Int = 70,
-  DSP_PIPELINE_REGS : Int = 2
+class AdderWrapper(
+  USE_HARDFLOAT : Boolean = false,
+  DW            : Int = 33,
+  SAF_W         : Int = 70,
+  SAF_L         : Int = 5
 ) extends Module {
-  /* I/O */
-  val io = IO(new MACInterface(DW))
+  private val SAF_WIDTH = SAF_W + 8 - SAF_L
+  private val D_WIDTH = if(USE_HARDFLOAT) { DW } else { SAF_WIDTH }
+  val io = IO(new GenericAdderInterface(D_WIDTH))
 
-  /* CONDITIONAL MAC */
-  // Allows plugging to a conditional module,
-  // https://stackoverflow.com/questions/70390834/conditional-module-instantiation-in-chisel
-  val mac : Module {
-    def io : MACInterface
-  } = if(USE_HARDFLOAT) {
-    Module(new HardMAC(DW, DSP_PIPELINE_REGS))
+  io.o_res = if(USE_HARDFLOAT) {
+    val adder = Module(new AddRecFN(8, 24))
+    adder.io.subOp          := false.B
+    adder.io.roundingMode   := 0.U
+    adder.io.detectTininess := 0.U
+    adder.io.a              := io.a
+    adder.io.b              := io.b
+    adder.io.out
   } else {
-    Module(new SAFMAC(DW, SAF_L, SAF_W, DSP_PIPELINE_REGS))
+    val adder = Module(new SAFAdder(SAF_L, SAF_W))
+    adder.i_safA := io.i_a
+    adder.i_safB := io.i_b
+    adder.o_res
   }
-
-  /* WIRING */
-  mac.io <> io
 }

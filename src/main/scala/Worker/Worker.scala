@@ -126,13 +126,36 @@ class Worker(
   }
 
   // Output logic
-  val sendAcc = (
-    RegNext(RegNext(wCntReg)) === wid &
-    RegNext(
-      oReg.valid & ~oReg.prog &
-      (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (PARAM.M_WIDTH - 1).U))
-    )
-  )
+  // TODO: - set to 1 when receiving last input
+  //       - wait for mac pipeline
+  //       - send data as write data
+  val gotLastInputReg = RegInit(false.B)
+  val MAC_TICKS = 4
+  val waitForMacReg   = RegInit(0.U(MAC_TICKS.W))
+  when(
+    iReg.valid & iReg.write & wCntReg === wid |
+    (wid === 0.U) & (mPtrReg === (PARAM.M_WIDTH - 1).U)
+  ) {
+    gotLastInputReg := true.B
+    waitForMacReg   := -1.S(MAC_TICKS.W).asUInt
+  }
+
+  // Shift counter
+  when(gotLastInputReg) {
+    waitForMacReg := waitForMacReg << 1
+  }
+
+  // 1 when acc must be sent (waiting for acc pipeline)
+  // val sendAcc = (
+  //   RegNext(RegNext(wCntReg)) === wid &
+  //   RegNext(
+  //     oReg.valid & ~oReg.prog &
+  //     (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (PARAM.M_WIDTH - 1).U))
+  //   )
+  // )
+
+  // Have to send accumulator
+  val sendAcc = gotLastInputReg & waitForMacReg === 0.U
 
   when(oReg.valid) {
     when(oReg.prog & RegNext(RegNext(wCntReg)) >= (PARAM.M_HEIGHT - 1).U - wid) {
@@ -151,6 +174,8 @@ class Worker(
     o.prog  := false.B
     // Reset worker counter
     wCntReg := 0.U
+    // Reset flag
+    gotLastInputReg := false.B
   } .otherwise {
     o := 0.U.asTypeOf(o)
   }
