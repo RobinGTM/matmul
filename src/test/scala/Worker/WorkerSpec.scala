@@ -31,22 +31,47 @@ import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 import math.pow
 
+import matmul.worker.interfaces._
 import matmul.utils._
 import saf.utils._
 import matmul.testutils._
+import hardfloat.{recFNFromFN,fNFromRecFN}
+
+class WorkerTestWrapper(
+  PARAM : Parameters
+) extends Module {
+  val wid = IO(Input(UInt(log2Up(PARAM.M_HEIGHT).W)))
+  val i   = IO(Input(new WorkerInterface(32)))
+  val o   = IO(Output(new WorkerInterface(32)))
+  val wk  = Module(new Worker(PARAM))
+  wk.wid := wid
+  
+  if(PARAM.USE_HARDFLOAT) {
+    wk.i.data := recFNFromFN(8, 24, i.data)
+  } else {
+    wk.i.data := expandF32(i.data)
+  }
+  wk.i.prog  := i.prog
+  wk.i.write := i.write
+  wk.i.valid := i.valid
+
+  if(PARAM.USE_HARDFLOAT) {
+    o.data := fNFromRecFN(8, 24, wk.o.data)
+  } else {
+    o.data := restoreF32(wk.o.data)
+  }
+  o.prog  := wk.o.prog
+  o.write := wk.o.write
+  o.valid := wk.o.valid
+}
 
 class WorkerSpec extends AnyFlatSpec with Matchers {
   val MH = 16
   val MW = 16
   val USE_HARDFLOAT = true
-  val DW = if(USE_HARDFLOAT) {
-    32
-  } else {
-    73
-  }
 
   "Worker" should "work_lol" in {
-    simulate(new Worker(
+    simulate(new WorkerTestWrapper(
       PARAM = new Parameters(
         Array("-h", s"${MH}", "-w", s"${MW}", "-hf", s"${USE_HARDFLOAT}")
       )
@@ -68,9 +93,7 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
           //   ).replace(' ', '0')).U
           // )
         } else {
-          uut.i.data.poke(
-            ("b" + floatToSAF(coeff)).U
-          )
+          uut.i.data.poke(floatToBitsUInt(coeff))
         }
         // uut.i.data.poke(i)
         uut.i.valid.poke(true)
