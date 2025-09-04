@@ -199,7 +199,7 @@ int do_benchmark(const matmul_t * matmul, benchinfo_t * bench_info)
         }
 
         // Compute norm for relative error
-        norm = gsl_blas_snrm2(vec);
+        norm = gsl_blas_snrm2(sw_result);
         err /= norm;
         // Accumulate relative error
         bench_info->mean_rel_err += err;
