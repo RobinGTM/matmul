@@ -144,6 +144,10 @@ package object utils {
     // Input FIFO is bigger
     val IFIFO_DEPTH = pow(2, log2Up(4 * M_WIDTH)).toInt
     val IFIFO_CNT_W = log2Up(IFIFO_DEPTH)
+    // MatMul chain pipeline registers
+    val PIPELINE_REGS = parseOpt("PIPELINE_REGS", "ppd", 2)
+    // MAC DSP pipeline registers
+    val MAC_DSP_PIPELINE_REGS = parseOpt("MAC_DSP_PIPELINE_DEPTH", "mpd", 3)
 
     val DW = 33
 

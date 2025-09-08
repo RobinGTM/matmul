@@ -1,4 +1,4 @@
-/* SAFAdder.scala -- SAF or hardfloat adder wrapper
+/* AccWrapper.scala -- SAF or hardfloat accumulator wrapper
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
@@ -22,9 +22,13 @@ package mac
 import chisel3._
 import chisel3.util._
 
+import hardfloat._
+import acc._
+import acc.interfaces._
+import saf._
 import mac.interfaces._
 
-class AdderWrapper(
+class AccWrapper(
   USE_HARDFLOAT : Boolean = false,
   DW            : Int = 33,
   SAF_W         : Int = 70,
@@ -32,20 +36,19 @@ class AdderWrapper(
 ) extends Module {
   private val SAF_WIDTH = SAF_W + 8 - SAF_L
   private val D_WIDTH = if(USE_HARDFLOAT) { DW } else { SAF_WIDTH }
-  val io = IO(new GenericAdderInterface(D_WIDTH))
 
-  io.o_res = if(USE_HARDFLOAT) {
-    val adder = Module(new AddRecFN(8, 24))
-    adder.io.subOp          := false.B
-    adder.io.roundingMode   := 0.U
-    adder.io.detectTininess := 0.U
-    adder.io.a              := io.a
-    adder.io.b              := io.b
-    adder.io.out
+  /* I/O */
+  val io = IO(new GenericAccInterface(D_WIDTH))
+
+  /* ACC */
+  val acc : Module {
+    def io : GenericAccInterface
+  } = if(USE_HARDFLOAT) {
+    Module(new HardAcc(DW, 8, 24))
   } else {
-    val adder = Module(new SAFAdder(SAF_L, SAF_W))
-    adder.i_safA := io.i_a
-    adder.i_safB := io.i_b
-    adder.o_res
+    Module(new SAFAcc(SAF_L, SAF_W))
   }
+
+  /* WIRING */
+  acc.io <> io
 }

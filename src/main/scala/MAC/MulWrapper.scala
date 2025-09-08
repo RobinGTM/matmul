@@ -1,6 +1,4 @@
-/* MACWrapper.scala -- MAC wrapper that facilitates abstraction of the
- *                     low-level float implementation to higher-level
- *                     modules
+/* MulWrapper.scala -- SAF or hardfloat multiplier wrapper
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
@@ -26,28 +24,30 @@ import chisel3.util._
 
 import hardfloat._
 import saf._
+import mac.interfaces._
 
-class MACWrapper(
+class MulWrapper(
   USE_HARDFLOAT     : Boolean = false,
   DW                : Int = 33,
-  SAF_L             : Int = 5,
   SAF_W             : Int = 70,
-  DSP_PIPELINE_REGS : Int = 2
+  SAF_L             : Int = 5,
+  DSP_PIPELINE_REGS : Int = 3
 ) extends Module {
-  /* I/O */
-  val io = IO(new MACInterface(DW))
+  private val SAF_WIDTH = SAF_W + 8 - SAF_L
+  private val OUT_WIDTH = if(USE_HARDFLOAT) { DW } else { SAF_WIDTH }
+  val io = IO(new GenericMulInterface(USE_HARDFLOAT, DW, SAF_WIDTH))
 
-  /* CONDITIONAL MAC */
-  // Allows plugging to a conditional module,
-  // https://stackoverflow.com/questions/70390834/conditional-module-instantiation-in-chisel
-  val mac : Module {
-    def io : MACInterface
-  } = if(USE_HARDFLOAT) {
-    Module(new HardMAC(DW, DSP_PIPELINE_REGS))
+  if(USE_HARDFLOAT) {
+    val mul = Module(new PipelinedMulRecFN(8, 24, DSP_PIPELINE_REGS))
+    mul.io.roundingMode   := 0.U
+    mul.io.detectTininess := 0.U
+    mul.io.a              := io.i_a
+    mul.io.b              := io.i_b
+    io.o_res              := mul.io.out
   } else {
-    Module(new SAFMAC(DW, SAF_L, SAF_W, DSP_PIPELINE_REGS))
+    val mul = Module(new SAFMul(DW, SAF_L, SAF_W, DSP_PIPELINE_REGS))
+    mul.i_a  := io.i_a
+    mul.i_b  := io.i_b
+    io.o_res := mul.o_saf
   }
-
-  /* WIRING */
-  mac.io <> io
 }

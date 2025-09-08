@@ -38,11 +38,14 @@ class MatMulCoreSpec extends AnyFlatSpec with Matchers {
   val MH = 10
   val MW = 5
   val USE_HARDFLOAT = true
+  val PIPELINE_DEPTH = 3
 
   "MatMul" should "work" in {
     simulate(new MatMulCore(
       PARAM = new Parameters(Array(
-        "-h", s"${MH}", "-w", s"${MW}", "-hf", s"${USE_HARDFLOAT}"
+        "-h", s"${MH}", "-w", s"${MW}",
+        "-ppd", s"${PIPELINE_DEPTH}",
+        "-hf", s"${USE_HARDFLOAT}"
       ))
     )) { uut =>
       val matrix = if(USE_HARDFLOAT) {

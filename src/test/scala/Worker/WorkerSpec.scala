@@ -68,13 +68,17 @@ class WorkerTestWrapper(
 class WorkerSpec extends AnyFlatSpec with Matchers {
   val MH = 16
   val MW = 16
-  val USE_HARDFLOAT = true
+  val USE_HARDFLOAT = false
+  val DSP_PIPELINE_REGS = 3
 
   "Worker" should "work_lol" in {
     simulate(new WorkerTestWrapper(
       PARAM = new Parameters(
-        Array("-h", s"${MH}", "-w", s"${MW}", "-hf", s"${USE_HARDFLOAT}")
-      )
+        Array(
+          "-h", s"${MH}", "-w", s"${MW}",
+          "-mpd", s"${DSP_PIPELINE_REGS}"
+          // "-hf"//, s"${USE_HARDFLOAT}"
+        ))
     )) { uut =>
       uut.reset.poke(true)
       uut.clock.step(3)
@@ -86,15 +90,7 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
       uut.wid.poke(ID)
       for(i <- 1 to MW * MH - 16 * ID) {
         val coeff = pow(-1, ((i + 1) % 2)).toFloat * i.toFloat
-        if(USE_HARDFLOAT) {
-          uut.i.data.poke(floatToBitsUInt(coeff))
-          //   ("b" + String.format(
-          //     "%32s", java.lang.Float.floatToIntBits(coeff).toBinaryString
-          //   ).replace(' ', '0')).U
-          // )
-        } else {
-          uut.i.data.poke(floatToBitsUInt(coeff))
-        }
+        uut.i.data.poke(floatToBitsUInt(coeff))
         // uut.i.data.poke(i)
         uut.i.valid.poke(true)
         uut.i.prog.poke(true)
@@ -108,15 +104,11 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
       // Send vector
       for(i <- 1 to MW) {
         val v = 10 * i.toFloat
-        if(USE_HARDFLOAT) {
-          uut.i.data.poke(
-            ("b" + String.format(
-              "%32s", java.lang.Float.floatToIntBits(v).toBinaryString
-            ).replace(' ', '0')).U
-          )
-        } else {
-          uut.i.data.poke(("b" + floatToSAF(v)).U)
-        }
+        uut.i.data.poke(
+          ("b" + String.format(
+            "%32s", java.lang.Float.floatToIntBits(v).toBinaryString
+          ).replace(' ', '0')).U
+        )
         uut.i.valid.poke(true)
         uut.clock.step()
         if(i == 5) {
@@ -130,6 +122,7 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
       // uut.clock.step(16)
 
       // Write command
+      uut.clock.step(DSP_PIPELINE_REGS)
       for(i <- 1 to ID) {
         uut.i.write.poke(true)
         uut.i.valid.poke(true)

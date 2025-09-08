@@ -27,9 +27,10 @@ import math.pow
 // SAFMul takes an extended floating point format (with signed,
 // expanded mantissa) and outputs a SAF
 class SAFMul(
-  DW  : Int = 33,
-  L   : Int = 5,
-  W   : Int = 81
+  DW                : Int = 33,
+  L                 : Int = 5,
+  W                 : Int = 81,
+  DSP_PIPELINE_REGS : Int = 3
 ) extends Module {
   private val SAF_W = W + 8 - L
   private val EW = 8
@@ -61,11 +62,11 @@ class SAFMul(
   val exSum = (exA +& exB) - FB.U
   // printf(cf"${exSum}\n")
   // printf(cf"${exSum(8)}\n")
-  val prodEx = Mux(exSum(8), Fill(8, 1.U), exSum(7, 0))
+  val prodEx = ShiftRegister(Mux(exSum(8), Fill(8, 1.U), exSum(7, 0)), DSP_PIPELINE_REGS)
   // Product of mantissae (50 bits + max shift from low exponent bits)
   private val PROD_W = MW * 2 + (1 << L) - 1
   // Product
-  val pr = (maA(MW - 1, 0) * maB(MW - 1, 0))(2 * MW - 1, 0)
+  val pr = ShiftRegister((maA(MW - 1, 0) * maB(MW - 1, 0))(2 * MW - 1, 0), DSP_PIPELINE_REGS)
   // Normalize and round
   // Mantissa width will be 2 * MW + 2^L - 1 - (MW - 1) after shifting
   // private val MANT_W = MW + (1 << L)
@@ -84,10 +85,10 @@ class SAFMul(
   prodMa    := prod.asUInt << prodLs
 
   // Re-sign mantissa
-  val maOut = Mux(sign, 1.U + ~prodMa, prodMa)
+  val maOut = Mux(ShiftRegister(sign, DSP_PIPELINE_REGS), 1.U + ~prodMa, prodMa)
 
   // Output control
-  when(eitherZero) {
+  when(ShiftRegister(eitherZero, DSP_PIPELINE_REGS)) {
     o_saf := 0.U
   } .otherwise {
     o_saf := Cat(prodRe, maOut)

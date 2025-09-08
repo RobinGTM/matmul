@@ -125,60 +125,66 @@ class Worker(
     }
   }
 
-  // Output logic
-  // TODO: - set to 1 when receiving last input
-  //       - wait for mac pipeline
-  //       - send data as write data
+  // Send result logic
+  val sendAcc = Wire(Bool())
   val gotLastInputReg = RegInit(false.B)
-  val MAC_TICKS = 4
-  val waitForMacReg   = RegInit(0.U(MAC_TICKS.W))
-  when(
-    iReg.valid & iReg.write & wCntReg === wid |
-    (wid === 0.U) & (mPtrReg === (PARAM.M_WIDTH - 1).U)
-  ) {
-    gotLastInputReg := true.B
-    waitForMacReg   := -1.S(MAC_TICKS.W).asUInt
+  // Additional pipeline ticks
+  // When using SAF: accumulator is pipelined (1 tick) and conversion
+  // to expanded F32 is pipelined (4 ticks)
+  val MAC_ADD_TICKS   = if(PARAM.USE_HARDFLOAT) { 0 } else { 5 }
+  val MAC_TICKS       = PARAM.MAC_DSP_PIPELINE_REGS + MAC_ADD_TICKS
+  val waitForMacReg   = RegInit(0.U((MAC_TICKS).W))
+  when(wid === 0.U) {
+    // Wait for MAC pipeline
+    when(RegNext(RegNext(
+      iReg.valid & ~iReg.prog & (mPtrReg === (PARAM.M_WIDTH - 1).U))
+    )) {
+      gotLastInputReg := true.B
+      waitForMacReg   := -1.S(MAC_TICKS.W).asUInt
+    }
+    // Wait for MAC pipeline (shift register)
+    when(gotLastInputReg) {
+      waitForMacReg := waitForMacReg << 1
+    }
+    // Set sendAcc when done
+    sendAcc := gotLastInputReg & waitForMacReg === 0.U
+    // Reset flags on sendAcc
+    when(sendAcc) {
+      gotLastInputReg := false.B
+      waitForMacReg   := 0.U
+    }
+  } .otherwise {
+    gotLastInputReg := false.B
+    waitForMacReg   := 0.U
+    sendAcc         := RegNext(
+      iReg.valid & iReg.write & ~iReg.prog & wCntReg === wid
+    )
   }
 
-  // Shift counter
-  when(gotLastInputReg) {
-    waitForMacReg := waitForMacReg << 1
-  }
-
-  // 1 when acc must be sent (waiting for acc pipeline)
-  // val sendAcc = (
-  //   RegNext(RegNext(wCntReg)) === wid &
-  //   RegNext(
-  //     oReg.valid & ~oReg.prog &
-  //     (oReg.write | (wid === 0.U & RegNext(RegNext(mPtrReg)) === (PARAM.M_WIDTH - 1).U))
-  //   )
-  // )
-
-  // Have to send accumulator
-  val sendAcc = gotLastInputReg & waitForMacReg === 0.U
-
-  when(oReg.valid) {
-    when(oReg.prog & RegNext(RegNext(wCntReg)) >= (PARAM.M_HEIGHT - 1).U - wid) {
-      o := 0.U.asTypeOf(o)
+  // Output logic
+  when(iReg.valid) {
+    when(iReg.prog & RegNext(wCntReg) >= (PARAM.M_HEIGHT - 1).U - wid) {
+      oReg := 0.U.asTypeOf(oReg)
     } .otherwise {
-      when(wid === (PARAM.M_HEIGHT - 1).U & ~oReg.write) {
-        o := 0.U.asTypeOf(o)
+      when(wid === (PARAM.M_HEIGHT - 1).U & ~iReg.write) {
+        oReg := 0.U.asTypeOf(oReg)
       } .otherwise {
-        o := oReg
+        oReg := iReg
       }
     }
   } .elsewhen(sendAcc) {
-    o.data  := macRes
-    o.valid := true.B
-    o.write := true.B
-    o.prog  := false.B
+    oReg.data  := macRes
+    oReg.valid := true.B
+    oReg.write := true.B
+    oReg.prog  := false.B
     // Reset worker counter
-    wCntReg := 0.U
-    // Reset flag
-    gotLastInputReg := false.B
+    wCntReg    := 0.U
   } .otherwise {
-    o := 0.U.asTypeOf(o)
+    oReg       := 0.U.asTypeOf(oReg)
   }
+
+  // Output register
+  o := oReg
 
   // When data comes with valid & prog: program data until mPtrReg
   // reaches its max. Then, reset mPtrReg and set iFwdReg to forward
@@ -187,12 +193,13 @@ class Worker(
   // mPtrReg reaches its max again, accumulation is done, so send
   // accumulator content to next worker with write flag on
 
-  /* MODULES */
-  val mac = Module(new MACWrapper(
+  /* MAC MODULE */
+  val mac = Module(new MAC(
     PARAM.USE_HARDFLOAT,
     PARAM.DW,
     PARAM.SAF_L,
-    PARAM.SAF_W
+    PARAM.SAF_W,
+    PARAM.MAC_DSP_PIPELINE_REGS
   ))
   mac.io.i_a   := coeff
   mac.io.i_b   := iReg.data

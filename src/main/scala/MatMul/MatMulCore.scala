@@ -52,21 +52,24 @@ class MatMulCore(
 
   /* WIRING */
   // Input
-  workers(0).i.data  := i.data
-  workers(0).i.valid := i.valid & readyReg
-  workers(0).i.prog  := i.prog
+  workers(0).i.data  := ShiftRegister(i.data, PARAM.PIPELINE_REGS)
+  workers(0).i.valid := ShiftRegister(i.valid & readyReg, PARAM.PIPELINE_REGS)
+  workers(0).i.prog  := ShiftRegister(i.prog, PARAM.PIPELINE_REGS)
   // Worker 0 generates the WRITE command itself
   workers(0).i.write := false.B
 
   // Worker chain
   for(w <- 1 to PARAM.M_HEIGHT - 1) {
-    workers(w).i <> workers(w - 1).o
+    workers(w).i := ShiftRegister(workers(w - 1).o, PARAM.PIPELINE_REGS)
   }
 
   // Output
-  o.data  := workers(PARAM.M_HEIGHT - 1).o.data
+  o.data  := ShiftRegister(workers(PARAM.M_HEIGHT - 1).o.data, PARAM.PIPELINE_REGS)
   // Only WRITE data is output
-  o.valid := workers(PARAM.M_HEIGHT - 1).o.valid & workers(PARAM.M_HEIGHT - 1).o.write
+  o.valid := ShiftRegister(
+    workers(PARAM.M_HEIGHT - 1).o.valid & workers(PARAM.M_HEIGHT - 1).o.write,
+    PARAM.PIPELINE_REGS
+  )
   // No prog signal on output
   o.prog  := false.B
 

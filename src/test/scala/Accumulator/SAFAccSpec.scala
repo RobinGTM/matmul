@@ -1,4 +1,4 @@
-/* SAFMACSpec.scala -- SAF MAC test-bench
+/* SAFAccSpec.scala -- SAF accumulator test-bench
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
@@ -17,41 +17,69 @@
  * You should have received a copy of the GNU General Public License
  * along with matmul. If not, see <https://www.gnu.org/licenses/>.
  */
-// package mac
+package acc
 
-// import chisel3._
-// import chisel3.util._
+import chisel3._
+import chisel3.util._
 
-// import org.scalatest.flatspec.AnyFlatSpec
-// import org.scalatest.matchers.must.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.must.Matchers
 
-// // https://github.com/edwardcwang/decoupled-serializer.git
-// // to generate VCD traces with chisel 6.6.0
-// import chisel3.simulator.VCDHackedEphemeralSimulator._
+// https://github.com/edwardcwang/decoupled-serializer.git
+// to generate VCD traces with chisel 6.6.0
+import chisel3.simulator.VCDHackedEphemeralSimulator._
 
-// import saf._
-// import saf.utils._
-// import mac.interfaces._
+import saf._
+import saf.utils._
+import acc.interfaces._
 
-// class SAFMACTest(
-//   DW : Int,
-//   W  : Int,
-//   L  : Int
-// ) extends Module {
-//   private val SAF_WIDTH = W + 8 - L
-//   val io     = IO(new MACInterface(DW))
-//   // Control output
-//   val o_saf  = IO(Output(UInt(SAF_WIDTH.W)))
-//   val safMac = Module(new SAFMAC(DW, L, W))
+class SAFAccTest(
+  W : Int,
+  L : Int
+) extends Module {
+  private val SAF_WIDTH = W + 8 - L
+  val i_saf = IO(Input(UInt(SAF_WIDTH.W)))
+  val i_acc = IO(Input(Bool()))
+  val i_rst = IO(Input(Bool()))
+  // Output float
+  val o_res = IO(Output(UInt(32.W)))
 
-//   safMac.io.i_a   := expandF32(io.i_a)
-//   safMac.io.i_b   := expandF32(io.i_b)
-//   safMac.io.i_acc := io.i_acc
-//   safMac.io.i_rst := io.i_rst
+  val safAcc = Module(new SAFAcc(L, W))
+  safAcc.io.i_acc := i_acc
+  safAcc.io.i_rst := i_rst
+  safAcc.io.i_in  := i_saf
+  o_res           := restoreF32(SAFToExpF32(safAcc.io.o_res, 33, L, W))
+}
 
-//   io.o_res := restoreF32(safMac.io.o_res)
-//   o_saf    := safMac.o_saf
-// }
+class SAFAccSpec extends AnyFlatSpec with Matchers {
+  "SAFAcc" should "work" in {
+    simulate(new SAFAccTest(70, 5)) { uut =>
+      def print_outs(uut : SAFAccTest) : Unit = {
+        println("=========================")
+        println(uut.o_res.peek())
+      }
+
+      uut.i_rst.poke(false)
+
+      uut.i_acc.poke(true)
+      uut.i_saf.poke(floatToSAFUInt(15.05F, 5, 70))
+      uut.clock.step()
+      uut.i_acc.poke(true)
+      uut.i_saf.poke(floatToSAFUInt(10.0F, 5, 70))
+      uut.clock.step()
+      uut.i_acc.poke(true)
+      uut.i_saf.poke(floatToSAFUInt(-5.06F, 5, 70))
+      uut.clock.step()
+      uut.i_acc.poke(true)
+      uut.i_saf.poke(floatToSAFUInt(0.322F, 5, 70))
+      uut.clock.step()
+
+      uut.i_acc.poke(false)
+
+      uut.clock.step(10)
+    }
+  }
+}
 
 // class SAFMACSpec extends AnyFlatSpec with Matchers {
 //   "SAFMAC" should "work" in {

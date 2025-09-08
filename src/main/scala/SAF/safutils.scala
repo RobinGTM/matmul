@@ -71,22 +71,44 @@ package object utils {
   ) : UInt = {
     val SAF_W = W + 8 - L
     // Reduced exponent
-    val reEx = saf(SAF_W - 1, SAF_W - (8 - L))
+    val reEx = RegInit(0.U((8 - L).W))
+    reEx    := saf(SAF_W - 1, SAF_W - (8 - L))
     // Extended mantissa
-    val exMa = saf(W - 1, 0)
+    val exMa = RegInit(0.U(W.W))
+    exMa    := saf(W - 1, 0)
+    // Is zero?
+    val isZero = exMa === 0.U
     // Sign
     val sign = exMa(W - 1)
     // Unsign mantissa
-    val uMa = Mux(sign, 1.U + ~exMa, exMa)
+    val uMa  = RegInit(0.U(W.W))
+    uMa     := Mux(sign, 1.U + ~exMa, exMa)
     // Find MSB to determine lshift
     val msbPos = (W.U - PriorityEncoder(Reverse(uMa)))
-    // Unshift mantissa
-    val mant = (exMa << (W.U - msbPos - 1.U))(W - 1, W - 25)
-    // printf(cf"${msbPos}<<<<<<<\n")
-    // printf(cf"${reEx}<<<<<<<\n")
-    // Recreate original exponent
-    val expt = (reEx << L) + msbPos - 1.U - 23.U
-    Mux(exMa === 0.U, 0.U(DW.W), Cat(expt, mant))
+    // PIPELINED SHIFT //
+    // ~8 bits (7 bits)
+    val shamt = Wire(UInt(8.W))
+    shamt    := W.U - msbPos - 1.U
+    // Pipeline stage 1
+    val mantShift1Reg = RegInit(0.U(W.W))
+    val expt1Reg      = RegInit(0.U(8.W))
+    mantShift1Reg    := RegNext(exMa) << (shamt(7, 4) << 4)
+    expt1Reg         := RegNext(reEx) << L
+    // Pipeline stage 2
+    val mantShift2Reg = RegInit(0.U(W.W))
+    val expt2Reg      = RegInit(0.U(8.W))
+    mantShift2Reg    := mantShift1Reg << RegNext(shamt(3, 0))
+    expt2Reg         := expt1Reg + RegNext(msbPos) - 1.U - 23.U
+
+    // val mantShiftReg = RegInit(0.U(25.W))
+    // val exptReg      = RegInit(0.U(8.W))
+    // mantShiftReg    := (exMa << shamt)(W - 1, W - 25)
+    // exptReg         := (reEx << L) + msbPos - 1.U - 23.U
+
+    // Output
+    Mux(ShiftRegister(isZero, 4), 0.U(DW.W), Cat(expt2Reg, mantShift2Reg(W - 1, W - 25))
+    )
+    // Mux(RegNext(isZero), 0.U(DW.W), Cat(exptReg, mantShiftReg))
   }
 
   def floatToSAF(

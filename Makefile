@@ -1,3 +1,4 @@
+
 # Set default shell (for using bash syntax in shells)
 SHELL           = /bin/bash
 # Main build directory
@@ -16,6 +17,8 @@ M_WIDTH         = 16
 FLOAT           = saf
 PLL_MULT        = 9
 PLL_DIV         = 10
+DSP_DEPTH       = 4
+PIPELINE_DEPTH  = 3
 # Fixed (hardware clock)
 BASE_FREQ      := 156.25
 CORE_FREQ      := '$(BASE_FREQ) * $(PLL_MULT) / $(PLL_DIV)'
@@ -31,6 +34,7 @@ SYSTEMVERILOG  := $(CHISELDIR)/hw/$(TOP_NAME).sv
 SBT_MEM         = 65535
 # Flags passed to Main
 SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
+-mpd $(DSP_DEPTH) -ppd $(PIPELINE_DEPTH) \
 -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
 -fbase $(BASE_FREQ) \
 -o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
