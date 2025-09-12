@@ -30,29 +30,55 @@ import org.scalatest.matchers.must.Matchers
 import chisel3.simulator.VCDHackedEphemeralSimulator._
 
 import matmul.utils._
+import matmul.interfaces._
 import matmul.testutils._
 import saf.utils._
+import hardfloat._
+
+class MatMulCoreTest(
+  PARAM : Parameters
+) extends Module {
+  val i = IO(Input(new MatMulInterface(32)))
+  val o = IO(Output(new MatMulInterface(32)))
+  val core = Module(new MatMulCore(PARAM))
+
+  if(PARAM.USE_HARDFLOAT) {
+    core.i.data := recFNFromFN(8, 24, i.data)
+  } else {
+    core.i.data := expandF32(i.data)
+  }
+  core.i.valid := i.valid
+  core.i.prog  := i.prog
+  core.i.ready := i.ready
+
+  if(PARAM.USE_HARDFLOAT) {
+    o.data := fNFromRecFN(8, 24, core.o.data)
+  } else {
+    o.data := restoreF32(core.o.data)
+  }
+  o.valid := core.o.valid
+  o.prog  := core.o.prog
+  o.ready := core.o.ready
+}
 
 class MatMulCoreSpec extends AnyFlatSpec with Matchers {
-  val file = "src/test/resources/dummy16-matrix.txt"
+  val file = "src/test/resources/dummy10x5-matrix2308555.txt"
   val MH = 10
   val MW = 5
   val USE_HARDFLOAT = true
-  val PIPELINE_DEPTH = 3
+  val PIPELINE_DEPTH = 4
+  val DSP_DEPTH = 4
 
   "MatMul" should "work" in {
-    simulate(new MatMulCore(
+    simulate(new MatMulCoreTest(
       PARAM = new Parameters(Array(
         "-h", s"${MH}", "-w", s"${MW}",
         "-ppd", s"${PIPELINE_DEPTH}",
+        "-mpd", s"${DSP_DEPTH}",
         "-hf", s"${USE_HARDFLOAT}"
       ))
     )) { uut =>
-      val matrix = if(USE_HARDFLOAT) {
-        readCSVFloat(file)
-      } else {
-        readCSVSAF(file)
-      }
+      val matrix = readCSVFloat(file)
 
       uut.reset.poke(true)
       uut.clock.step(3)
@@ -62,6 +88,10 @@ class MatMulCoreSpec extends AnyFlatSpec with Matchers {
       // Prog sequence
       for(i <- 0 to MH - 1) {
         for(j <- 0 to MW - 1) {
+          if(i === MH / 2 && j === 3) {
+            uut.i.valid.poke(false)
+            uut.clock.step(10)
+          }
           uut.i.data.poke(matrix(i)(j).U)
           uut.i.valid.poke(true)
           uut.i.prog.poke(true)
@@ -78,17 +108,36 @@ class MatMulCoreSpec extends AnyFlatSpec with Matchers {
 
       // uut.clock.step()
 
+      val vec10x5 = (for(i <-
+        Array(2.024726, 0.999403, 1.529937, 0.536318, 0.745846)
+      ) yield {
+        floatToBitsUInt(i.toFloat)
+      })
+
       for(i <- 0 to MW - 1) {
-        if(USE_HARDFLOAT) {
-          uut.i.data.poke(floatToBitsUInt((i + 1).toFloat))
-        } else {
-          uut.i.data.poke(floatToSAFUInt((i + 1).toFloat))
+        if(i == MW - 1) {
+          uut.i.data.poke(0.U)
+          uut.i.valid.poke(false)
+          uut.clock.step()
         }
+        uut.i.data.poke(vec10x5(i))
         uut.i.valid.poke(true)
         uut.clock.step()
       }
-      uut.i.data.poke(0)
-      uut.i.valid.poke(false)
+
+      for(i <- 0 to 99) {
+        for(i <- 0 to MW - 1) {
+          uut.i.data.poke(vec10x5(i))
+          uut.i.valid.poke(true)
+          uut.clock.step()
+        }
+        // while(!uut.o.ready.peek().litToBoolean) {
+          // uut.clock.step()
+        // }
+        // uut.i.data.poke(0)
+        // uut.i.valid.poke(false)
+        // uut.clock.step()
+      }
 
       uut.clock.step()
 
@@ -97,11 +146,7 @@ class MatMulCoreSpec extends AnyFlatSpec with Matchers {
       }
 
       for(i <- 0 to MW - 1) {
-        if(USE_HARDFLOAT) {
-          uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
-        } else {
-          uut.i.data.poke(floatToSAFUInt((- i - 1).toFloat))
-        }
+        uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
         uut.i.valid.poke(true)
         uut.clock.step()
       }
@@ -112,11 +157,7 @@ class MatMulCoreSpec extends AnyFlatSpec with Matchers {
         uut.clock.step()
       }
       for(i <- 0 to MW - 1) {
-        if(USE_HARDFLOAT) {
-          uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
-        } else {
-          uut.i.data.poke(floatToSAFUInt((- i - 1).toFloat))
-        }
+        uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
         uut.i.valid.poke(true)
         uut.clock.step()
       }
@@ -129,11 +170,7 @@ class MatMulCoreSpec extends AnyFlatSpec with Matchers {
           uut.clock.step()
         }
         for(i <- 0 to MW - 1) {
-          if(USE_HARDFLOAT) {
-            uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
-          } else {
-            uut.i.data.poke(floatToSAFUInt((- i - 1).toFloat))
-          }
+          uut.i.data.poke(floatToBitsUInt((- i - 1).toFloat))
           if(i == 3) {
             uut.i.valid.poke(false)
             uut.clock.step(40)

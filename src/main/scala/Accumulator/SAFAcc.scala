@@ -56,6 +56,16 @@ class SAFAcc(
   // Accumulated
   val accEmShamtReg = RegInit(0.U((EW - L).W))
 
+  // Overflow correction
+  // Unsigned sum mantissa
+  val uAccEm = Mux(accEmReg(W), 1.U + ~accEmReg.asUInt, accEmReg.asUInt)
+  // Compute position of MSB
+  val msbPos = (W + 1).U - PriorityEncoder(Reverse(uAccEm))
+  // Correction register (for overflow)
+  val corrReg = RegNext(msbPos > (W - 1).U)
+  // Corrected accumulator reduced exponent
+  val corrRe = accReReg + corrReg
+
   // Reduced exponent accumulation and shift amounts
   when(io.i_rst) {
     accReReg      := 0.U
@@ -63,18 +73,19 @@ class SAFAcc(
     iEmShamtReg   := 0.U
     accEmShamtReg := 0.U
     iEmDelayReg   := 0.S
+    corrReg       := 0.U
   } .elsewhen(io.i_acc) {
     // Accumulated reduced exponent
-    accReReg      := Mux(accReReg > iRe, accReReg, iRe)
+    accReReg      := Mux(corrRe > iRe, corrRe, iRe)
     // Shift amount for incoming mantissa
-    iEmShamtReg   := Mux(accReReg > iRe,
-      Mux(accReReg - iRe > 3.U, 3.U, accReReg - iRe),
+    iEmShamtReg   := Mux(corrRe > iRe,
+      Mux(accReReg - iRe > 3.U, 3.U, corrRe - iRe),
       0.U
     )
     // Shift amount for accumulated mantissa
-    accEmShamtReg := Mux(accReReg > iRe,
+    accEmShamtReg := Mux(corrRe > iRe,
       0.U,
-      Mux(iRe - accReReg > 3.U, 3.U, iRe - accReReg)
+      Mux(iRe - corrRe > 3.U, 3.U, iRe - corrRe)
     )
   } .otherwise {
     iEmShamtReg   := 0.U
@@ -87,25 +98,23 @@ class SAFAcc(
 
   // Accumulate extended mantissa
   when(RegNext(io.i_acc)) {
-    accEmReg := shiftedIEm +& shiftedAccEm
+    accEmReg := (shiftedIEm +& shiftedAccEm) >> (corrReg << L)
   }
 
-  // Unsigned sum mantissa
-  val uAccEm = Mux(accEmReg(W), 1.U + ~accEmReg.asUInt, accEmReg.asUInt)
-  // Compute position of MSB
-  val msbPos = (W + 1).U - PriorityEncoder(Reverse(uAccEm))
-
-  // Output normalization // PIPELINE???
-  val outRe = Wire(UInt((EW - L).W))
-  val outEm = Wire(UInt(W.W))
-  when(msbPos > (W - 1).U) {
-    outRe := accReReg + 1.U
-    outEm := (accEmReg >> (1.U << L))(W - 1, 0).asUInt
-  } .otherwise {
-    outRe := accReReg
-    outEm := accEmReg.asUInt
-  }
+  // // Output normalization // PIPELINE???
+  // val outRe = Wire(UInt((EW - L).W))
+  // val outEm = Wire(UInt(W.W))
+  // when(msbPos > (W - 1).U) {
+  //   outRe := accReReg + 1.U
+  //   outEm := (accEmReg >> (1.U << L))(W - 1, 0).asUInt
+  // } .otherwise {
+  //   outRe := accReReg
+  //   outEm := accEmReg.asUInt
+  // }
 
   // Output
-  io.o_res := Cat(outRe, outEm)
+  io.o_res := Cat(accReReg, accEmReg(W - 1, 0))
+  // Control
+  // val outF32 = restoreF32(SAFToExpF32(io.o_res))
+  // dontTouch(outF32)
 }

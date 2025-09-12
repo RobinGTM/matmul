@@ -23,7 +23,7 @@ import chisel3._
 import chisel3.util._
 
 import mac.interfaces._
-import saf.utils._
+import saf._
 
 class MAC(
   USE_HARDFLOAT     : Boolean = true,
@@ -59,13 +59,15 @@ class MAC(
 
   // Accumulator wiring
   acc.io.i_acc := RegNext(accPipelineReg)
-  acc.io.i_rst := RegNext(rstPipelineReg)
+  acc.io.i_rst := io.i_rst//RegNext(rstPipelineReg)
   acc.io.i_in  := macReg
 
   // Output
   if(USE_HARDFLOAT) {
     io.o_res := acc.io.o_res
   } else {
-    io.o_res := SAFToExpF32(acc.io.o_res)
+    val outConv      = withReset(io.i_rst) { Module(new SAFToExpF32(DW, SAF_L, SAF_W)) }
+    outConv.i_saf   := acc.io.o_res
+    io.o_res        := outConv.o_ef32
   }
 }

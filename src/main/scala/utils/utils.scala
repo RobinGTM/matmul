@@ -147,16 +147,19 @@ package object utils {
     // MatMul chain pipeline registers
     val PIPELINE_REGS = parseOpt("PIPELINE_REGS", "ppd", 2)
     // MAC DSP pipeline registers
-    val MAC_DSP_PIPELINE_REGS = parseOpt("MAC_DSP_PIPELINE_DEPTH", "mpd", 3)
+    val MAC_DSP_PIPELINE_REGS = parseOpt("MAC_DSP_PIPELINE_DEPTH", "mpd", 4)
 
+    // Datapaths width
     val DW = 33
 
+    // Control register bit fields
     val CTL_PROG  = 0x0
     val CTL_WRITE = 0x1
     val CTL_READY = 0x2
     // Set to 1 if SAF is enabled (convenience)
     val CTL_SAF   = 0x10
 
+    // Register addresses
     val CTL_REG    = 0x0
     val HEIGHT_REG = 0x4
     val WIDTH_REG  = 0x8

@@ -111,11 +111,11 @@ class TopLevelIntegration(
 
 class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
   // Divisor value for fake clk divisor
-  val clkDiv  = 3
-  val MH = 16
-  val MW = 32
-  val USE_HARDFLOAT = true
-  val file = "src/test/resources/dummy16-matrix.txt"
+  val clkDiv = 3
+  val MH = 10
+  val MW = 5
+  val USE_HARDFLOAT = false
+  val file = "src/test/resources/dummy10x5-matrix2308555.txt"
 
   "TopLevelIntegration" should "work" in {
     simulate(new TopLevelIntegration(
@@ -280,28 +280,32 @@ class TopLevelIntegrationSpec extends AnyFlatSpec with Matchers {
       write_ctl(0x0, 1)
 
       // Send prog data
-      // val coeffs = (
-      //   for(
-      //     i <- 0 to MH - 1;
-      //     j <- 0 to MW - 1
-      //   ) yield {
-      //     matrix(i)(j).U
-      //   }
-      // ).toList
-      val coeffs = (for(i <- 0 to MH * MW - 1) yield {
-        // print(s"${i} ")
-        floatToBitsUInt(i.toFloat)
-      }).toList
-      println(coeffs)
+      val coeffs = (
+        for(
+          i <- 0 to MH - 1;
+          j <- 0 to MW - 1
+        ) yield {
+          matrix(i)(j).U
+        }
+      ).toList
+
+      // val coeffs = (for(i <- 0 to MH * MW - 1) yield {
+      //   // print(s"${i} ")
+      //   floatToBitsUInt(i.toFloat)
+      // }).toList
+      // println(coeffs)
       write_axi(111, coeffs)
 
       // Send vector
-      val vec = (for(i <- 0 to MW - 1) yield {
+      val vec = (for(i <- Array(2.024726, 0.999403, 1.529937, 0.536318, 0.745846)) yield {
         // print(s"${(i + 1) % 2} ")
-        floatToBitsUInt(((i + 1) % 2).toFloat)
+        floatToBitsUInt(i.toFloat)
       }).toList
       println(vec)
+      write_axi(2, vec)
+      write_axi(22, vec)
       write_axi(222, vec)
+      write_axi(2222, vec)
 
       stepSlow(256)
 

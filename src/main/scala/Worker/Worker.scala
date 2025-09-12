@@ -23,6 +23,7 @@ package matmul.worker
 import chisel3._
 import chisel3.util._
 
+import matmul.utils.BetterBRAM
 import mac._
 import matmul.worker.interfaces._
 import matmul.utils.Parameters
@@ -44,12 +45,11 @@ class Worker(
   /* INTERNALS */
   // Input buffer
   val iReg    = RegNext(i)
-  // Accumulator
-  val accReg  = RegInit(0.U(PARAM.DW.W))
   // Output buffer
   val oReg    = RegNext(iReg)
   // Worker memory (matrix coefficients in float32)
   val wkMem   = SyncReadMem(PARAM.M_WIDTH, UInt(PARAM.DW.W))
+  // val wkMem   = Module(new BetterBRAM(PARAM.DW, PARAM.M_WIDTH, 1))
   // Memory address pointer
   val mPtrReg = RegInit(0.U(log2Up(PARAM.M_WIDTH).W))
   // Worker counter
@@ -67,8 +67,24 @@ class Worker(
   // Coefficient (memory content)
   // When input data must be accumulated, read memory to get coeff
   // ready for next tick, to be passed into the MAC
-  val coeff   = Wire(UInt(PARAM.DW.W))
+  // val coeff   = Wire(UInt(PARAM.DW.W))
+  val coeff   = RegInit(0.U(PARAM.DW.W))
   coeff      := wkMem.read(mPtrReg, iDoAcc)
+  // Programming logic
+  // wkMem.io.i_clk  := clock
+  // wkMem.io.i_rst  := reset
+  // wkMem.io.i_addr := mPtrReg
+  // wkMem.io.i_data := i.data
+  // wkMem.io.i_en   := iDoAcc
+  // wkMem.io.i_we   := i.valid & i.prog & (wCntReg === (PARAM.M_HEIGHT - 1).U - wid)
+  // coeff           := wkMem.io.o_data
+
+  when(i.valid & i.prog) {
+    when(wCntReg === (PARAM.M_HEIGHT - 1).U - wid) {
+      wkMem.write(mPtrReg, i.data)
+    }
+  }
+
   // MAC result wire
   val macRes  = Wire(UInt(PARAM.DW.W))
 
@@ -118,27 +134,19 @@ class Worker(
     wCntReg := 0.U
   }
 
-  // Programming logic
-  when(i.valid & i.prog) {
-    when(wCntReg === (PARAM.M_HEIGHT - 1).U - wid) {
-      wkMem.write(mPtrReg, i.data)
-    }
-  }
-
   // Send result logic
   val sendAcc = Wire(Bool())
   val gotLastInputReg = RegInit(false.B)
   // Additional pipeline ticks
   // When using SAF: accumulator is pipelined (1 tick) and conversion
   // to expanded F32 is pipelined (4 ticks)
-  val MAC_ADD_TICKS   = if(PARAM.USE_HARDFLOAT) { 0 } else { 5 }
+  // Ticks: 1 || 6 (tested)
+  val MAC_ADD_TICKS   = if(PARAM.USE_HARDFLOAT) { 2 } else { 7 }
   val MAC_TICKS       = PARAM.MAC_DSP_PIPELINE_REGS + MAC_ADD_TICKS
   val waitForMacReg   = RegInit(0.U((MAC_TICKS).W))
   when(wid === 0.U) {
     // Wait for MAC pipeline
-    when(RegNext(RegNext(
-      iReg.valid & ~iReg.prog & (mPtrReg === (PARAM.M_WIDTH - 1).U))
-    )) {
+    when(iReg.valid & ~iReg.prog & (RegNext(mPtrReg) === (PARAM.M_WIDTH - 1).U)) {
       gotLastInputReg := true.B
       waitForMacReg   := -1.S(MAC_TICKS.W).asUInt
     }
@@ -201,9 +209,14 @@ class Worker(
     PARAM.SAF_W,
     PARAM.MAC_DSP_PIPELINE_REGS
   ))
-  mac.io.i_a   := coeff
-  mac.io.i_b   := iReg.data
-  mac.io.i_acc := RegNext(iDoAcc)
+  when(RegNext(iReg.valid & ~iReg.prog & ~iReg.write)) {
+    mac.io.i_a := coeff
+    mac.io.i_b := RegNext(iReg.data)
+  } .otherwise {
+    mac.io.i_a := 0.U
+    mac.io.i_b := 0.U
+  }
+  mac.io.i_acc := RegNext(RegNext(iDoAcc))
   macRes       := mac.io.o_res
   mac.io.i_rst := sendAcc
 }

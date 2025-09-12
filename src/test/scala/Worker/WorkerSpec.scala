@@ -76,7 +76,7 @@ class WorkerSpec extends AnyFlatSpec with Matchers {
       PARAM = new Parameters(
         Array(
           "-h", s"${MH}", "-w", s"${MW}",
-          "-mpd", s"${DSP_PIPELINE_REGS}"
+          "-mpd", s"${DSP_PIPELINE_REGS}"//,
           // "-hf"//, s"${USE_HARDFLOAT}"
         ))
     )) { uut =>

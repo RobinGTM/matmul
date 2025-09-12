@@ -73,8 +73,6 @@ class SAFMul(
   val prod = Wire(SInt(W.W))
   prod    := Cat((pr >> (MW - 1)), pr(MW - 2, 0).orR).asSInt
 
-  // printf(cf"maA: ${maA} maB: ${maB}\n");
-
   // Product reduced exponent
   val prodRe = prodEx(7, L)
   // Product exponent low bits (left-shift)

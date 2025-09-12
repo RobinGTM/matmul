@@ -52,11 +52,18 @@ class PipelinedMulFullRawFN(
     DSP_PIPELINE_REGS
   )
   /* WIRING */
-  io.invalidExc    := isSigNaNRawFloat(io.a) || isSigNaNRawFloat(io.b) || notSigNaN_invalidExc
+  io.invalidExc    := (
+    isSigNaNRawFloat(ShiftRegister(io.a, DSP_PIPELINE_REGS))
+      || isSigNaNRawFloat(ShiftRegister(io.b, DSP_PIPELINE_REGS))
+      || notSigNaN_invalidExc
+  )
   io.rawOut.isInf  := notNaN_isInfOut
   io.rawOut.isZero := notNaN_isZeroOut
   io.rawOut.sExp   := common_sExpOut
-  io.rawOut.isNaN  := io.a.isNaN || io.b.isNaN
+  io.rawOut.isNaN  := (
+    ShiftRegister(io.a.isNaN, DSP_PIPELINE_REGS)
+      || ShiftRegister(io.b.isNaN, DSP_PIPELINE_REGS)
+  )
   io.rawOut.sign   := notNaN_signOut
   io.rawOut.sig    := common_sigOut
 }

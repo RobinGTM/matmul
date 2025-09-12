@@ -134,12 +134,13 @@ int do_benchmark(const matmul_t * matmul, benchinfo_t * bench_info)
     ret = populate_randmat(mat);
     CHECK_RET(ret);
 
-    if (bench_info->dry_run)
+    if (bench_info->dry_run | bench_info->print)
     {
       printf("--------------- MATRIX NUMBER %d ---------------\n", m);
       print_gsl_matrix_float(stdout, mat);
     }
-    else
+
+    if (!bench_info->dry_run)
     {
       // Program matrix into hardware
       RUN_CHECK(prog(matmul, mat), ret);
@@ -152,15 +153,16 @@ int do_benchmark(const matmul_t * matmul, benchinfo_t * bench_info)
       CHECK_RET(ret);
 
       // Dry run: just print things
-      if (bench_info->dry_run)
+      if (bench_info->dry_run | bench_info->print)
       {
         printf("-------- VECTOR NUMBER %d (MATRIX %d) --------\n", v, m);
         print_gsl_vector_float(stdout, vec);
       }
-      else
+
+      if (!bench_info->dry_run)
       {
         dprintf(2, "Sending vector number %d for matrix number %d...\n",
-                v + 1, m + 1);
+                v, m);
         // Hardware matrix multiplication
         start = clock();
         RUN_CHECK(hw_matmul(matmul, hw_result, mat, vec, MATMUL_NOPROG), ret);

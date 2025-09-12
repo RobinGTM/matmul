@@ -1,4 +1,3 @@
-
 # Set default shell (for using bash syntax in shells)
 SHELL           = /bin/bash
 # Main build directory
