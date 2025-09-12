@@ -48,8 +48,8 @@ class Worker(
   // Output buffer
   val oReg    = RegNext(iReg)
   // Worker memory (matrix coefficients in float32)
-  val wkMem   = SyncReadMem(PARAM.M_WIDTH, UInt(PARAM.DW.W))
-  // val wkMem   = Module(new BetterBRAM(PARAM.DW, PARAM.M_WIDTH, 1))
+  // val wkMem   = SyncReadMem(PARAM.M_WIDTH, UInt(PARAM.DW.W))
+  val wkMem   = Module(new BetterBRAM(PARAM.DW, PARAM.M_WIDTH, 1))
   // Memory address pointer
   val mPtrReg = RegInit(0.U(log2Up(PARAM.M_WIDTH).W))
   // Worker counter
@@ -67,23 +67,23 @@ class Worker(
   // Coefficient (memory content)
   // When input data must be accumulated, read memory to get coeff
   // ready for next tick, to be passed into the MAC
-  // val coeff   = Wire(UInt(PARAM.DW.W))
-  val coeff   = RegInit(0.U(PARAM.DW.W))
-  coeff      := wkMem.read(mPtrReg, iDoAcc)
-  // Programming logic
-  // wkMem.io.i_clk  := clock
-  // wkMem.io.i_rst  := reset
-  // wkMem.io.i_addr := mPtrReg
-  // wkMem.io.i_data := i.data
-  // wkMem.io.i_en   := iDoAcc
-  // wkMem.io.i_we   := i.valid & i.prog & (wCntReg === (PARAM.M_HEIGHT - 1).U - wid)
-  // coeff           := wkMem.io.o_data
+  val coeff   = Wire(UInt(PARAM.DW.W))
+  // val coeff   = RegInit(0.U(PARAM.DW.W))
+  // coeff      := wkMem.read(mPtrReg, iDoAcc)
+  // Memory wiring
+  wkMem.io.i_clk  := clock
+  wkMem.io.i_rst  := reset
+  wkMem.io.i_addr := mPtrReg
+  wkMem.io.i_data := i.data
+  wkMem.io.i_en   := iDoAcc
+  wkMem.io.i_we   := i.valid & i.prog & (wCntReg === (PARAM.M_HEIGHT - 1).U - wid)
+  coeff           := wkMem.io.o_data
 
-  when(i.valid & i.prog) {
-    when(wCntReg === (PARAM.M_HEIGHT - 1).U - wid) {
-      wkMem.write(mPtrReg, i.data)
-    }
-  }
+  // when(i.valid & i.prog) {
+  //   when(wCntReg === (PARAM.M_HEIGHT - 1).U - wid) {
+  //     wkMem.write(mPtrReg, i.data)
+  //   }
+  // }
 
   // MAC result wire
   val macRes  = Wire(UInt(PARAM.DW.W))

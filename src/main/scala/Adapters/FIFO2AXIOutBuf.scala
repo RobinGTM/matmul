@@ -47,7 +47,7 @@ class FIFO2AXIOutBuf[T <: Data](
 
   val outBufReg      = RegInit(0.U.asTypeOf(dType))
   val outLoadedReg   = RegInit(false.B)
-  val loadOut        = RegNext(o_valid & ~i_ready & ~outLoadedReg)
+  val loadOut        = o_valid & ~i_ready & ~outLoadedReg
   when(loadOut) {
     // Store FIFO output in case bus is not ready
     outLoadedReg := true.B
@@ -69,9 +69,9 @@ class FIFO2AXIOutBuf[T <: Data](
   // - bus is ready OR
   // - data is loaded in output buffer and was not read on previous
   //   tick
-  fifo_rd.i_en := (loadOut & ~RegNext(RegNext(fifo_rd.i_en))) | i_ready
+  fifo_rd.i_en := (loadOut & ~RegNext(fifo_rd.i_en)) | i_ready
 
   // Assign data to buffer or input data
   o_data  := Mux(sendBufReg | outLoadedReg, outBufReg, fifo_rd.o_data)
-  o_valid := RegNext(RegNext(fifo_rd.o_nempty & fifo_rd.i_en)) | sendBufReg | outLoadedReg
+  o_valid := RegNext(fifo_rd.o_nempty & fifo_rd.i_en) | sendBufReg | outLoadedReg
 }

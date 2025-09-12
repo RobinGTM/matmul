@@ -39,6 +39,7 @@ SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
 -o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
 $(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf')
 # Additional flags for circt and firtool
+CIRCT_FLAGS    := "--split-verilog"
 ifdef CIRCT_FLAGS
 SBT_RUN_FLAGS += -C \"$(CIRCT_FLAGS)\"
 endif

@@ -40,7 +40,8 @@ object Main {
       ) ++ param.CIRCT_ARGS,
       firtoolOpts = Array(
         "-disable-all-randomization",
-        "-strip-debug-info"
+        "-strip-debug-info",
+        "-strip-fir-debug-info"
       ) ++ param.FIRTOOL_ARGS
     )
 

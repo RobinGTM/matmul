@@ -102,7 +102,7 @@ class AsyncFIFOReadPort[T <: Data](
   /* OUTPUT */
   // Actually read memory only when FIFO is not empty
   mem.i_en       := ~fifoEmpty
-  fifo_rd.o_data := RegNext(mem.o_data)
+  fifo_rd.o_data := mem.o_data
 
   /* READ COUNTER LOGIC */
   when(fifo_rd.i_en & ~fifoEmpty) {
