@@ -36,8 +36,7 @@ SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
 -mpd $(DSP_DEPTH) -ppd $(PIPELINE_DEPTH) \
 -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
 -fbase $(BASE_FREQ) \
--o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR) \
-$(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf')
+-o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)
 # Additional flags for circt and firtool
 CIRCT_FLAGS    := "--split-verilog"
 ifdef CIRCT_FLAGS
@@ -46,6 +45,8 @@ endif
 ifdef FIRTOOL_FLAGS
 SBT_RUN_FLAGS += -F \"$(FIRTOOL_FLAGS)\"
 endif
+SBT_RUN_FLAGS += $(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf')
+
 # Vitis kernel compilation
 ifdef VITIS
 SBT_RUN = runMain matmul.stage.VitisMain
@@ -158,13 +159,13 @@ all: $(SYSTEMVERILOG) $(OBJS) $(EXE) $(BITSTREAM)
 
 .PHONY: clean
 clean:
-	find . -name '*.log' -delete
-	find . -name '*.jou' -delete
+#	find $(BUILDDIR_ABS) -name '*.log' -delete
+#	find $(BUILDDIR_ABS) -name '*.jou' -delete
 	rm -rf $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)
 
 .PHONY: distclean
 distclean: clean
-	find $(BUILDDIR_ABS) -name 'matmul*' -delete
-	find . -name '*.o' -delete
+#	find $(BUILDDIR_ABS) -name 'matmul*' -delete
+#	find . -name '*.o' -delete
 #	rm -rf project
 #	rm -rf target
