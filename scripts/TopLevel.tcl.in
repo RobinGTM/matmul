@@ -8,105 +8,143 @@ set DCP_DIR                  //DCP_DIR//
 set RPT_DIR                  //RPT_DIR//
 set PART                     //VIVADO_PART//
 set THIS_SCRIPT              //TCL//
+set USER_SLR_CSTRS           //USER_SLR_CSTRS//
+set OOC                      //OOC//
 set_param general.maxThreads //NPROC//
 
 read_verilog -sv [glob ${CHISEL_DIR}/hw/*.sv]
 read_ip src/main/ip/xdma/xdma_0.xci
 read_xdc [glob src/main/xdc/*.xdc]
-
-# Synthesis
-# Out-of-context (OOC) synthesize every submodule (especially Worker)
-set ooc_modules \
-{
-  Worker \
-  AsyncFIFOReadPort \
-  AsyncFIFOWritePort \
-  SAXIRW2Full \
-  AXILiteSlaveMCPWrapper \
-  AXIMemory2FIFO \
-  FIFO2AXIMemory \
-  AXIS2FIFO \
-  FIFO2AXIS \
-  MCPCross2RegAdapter \
-  MatMulController
+if { ${USER_SLR_CSTRS} == 1 } {
+  read_xdc [glob ${CHISEL_DIR}/hw/*.xdc]
 }
 
-foreach ooc_module ${ooc_modules} {
-  set dcp ${DCP_DIR}/${ooc_module}_OOC.dcp
-  if {
-    ([ file exist ${dcp} ] == 1) &&
-    ([ file mtime ${dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
-  } {
-    puts "Found existing dcp, not re-synthesizing \"${ooc_module}\""
-  } else {
-    synth_design -part ${PART} -top ${ooc_module} -mode out_of_context
-    opt_design
-    # Vivado does this
-    # set_param constraints.enableBinaryConstraints false
-    write_checkpoint -force -noxdef ${dcp}
-    file mkdir ${RPT_DIR}/${ooc_module}
-    report_utilization -hierarchical -file $RPT_DIR/${ooc_module}/util_synth.rpt \
-      -pb ${RPT_DIR}/${ooc_module}/util_synth.pb
+if { ${OOC} == 1 } {
+  # Synthesis
+  # Out-of-context (OOC) synthesize every submodule (especially Worker)
+  set ooc_modules \
+  {
+    Worker \
+    AsyncFIFOReadPort \
+    AsyncFIFOWritePort \
+    SAXIRW2Full \
+    AXILiteSlaveMCPWrapper \
+    AXIMemory2FIFO \
+    FIFO2AXIMemory \
+    AXIS2FIFO \
+    FIFO2AXIS \
+    MCPCross2RegAdapter \
+    MatMulController
   }
-  add_files -quiet ${dcp}
-  # Prevent stitching in top-level synthesis
-  set_property used_in_implementation false [get_files ${dcp}]
-}
 
-set top_dcp ${DCP_DIR}/${top_name}.dcp
-if {
-  ([ file exist ${top_dcp} ] == 1) &&
-  ([ file mtime ${top_dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
-} {
-  puts "Found existing top-level dcp, not re-synthesizing top-level \"${top_name}\""
-  open_checkpoint ${top_dcp}
+  foreach ooc_module ${ooc_modules} {
+    set dcp ${DCP_DIR}/${ooc_module}_OOC.dcp
+    if {
+      ([ file exist ${dcp} ] == 1) &&
+      ([ file mtime ${dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
+    } {
+      puts "Found existing dcp, not re-synthesizing \"${ooc_module}\""
+    } else {
+      synth_design -part ${PART} -top ${ooc_module} -mode out_of_context
+      opt_design
+      # Vivado does this
+      # set_param constraints.enableBinaryConstraints false
+      write_checkpoint -force -noxdef ${dcp}
+      file mkdir ${RPT_DIR}/${ooc_module}
+      report_utilization -hierarchical -file $RPT_DIR/${ooc_module}/util_synth.rpt \
+        -pb ${RPT_DIR}/${ooc_module}/util_synth.pb
+    }
+    add_files -quiet ${dcp}
+    # Prevent stitching in top-level synthesis
+    set_property used_in_implementation false [get_files ${dcp}]
+  }
+  
+  set top_dcp ${DCP_DIR}/${top_name}.dcp
+  if {
+    ([ file exist ${top_dcp} ] == 1) &&
+    ([ file mtime ${top_dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
+  } {
+    puts "Found existing top-level dcp, not re-synthesizing top-level \"${top_name}\""
+    open_checkpoint ${top_dcp}
+  } else {
+    synth_design -top ${top_name} -part ${PART}
+    write_checkpoint -force -noxdef ${top_dcp}
+    file mkdir ${RPT_DIR}/${top_name}
+    report_utilization -hierarchical -file ${RPT_DIR}/${top_name}/util_synth.rpt \
+      -pb ${RPT_DIR}/${top_name}/util_synth.pb
+  }
+
+  # Vivado scripts do this and this seems to allow opt_design after
+  # link_design
+  create_project -in_memory -part ${PART}
+
+  # Re-add files
+  foreach ooc_module ${ooc_modules} {
+    add_files -quiet ${DCP_DIR}/${ooc_module}_OOC.dcp
+    set_property netlist_only true [get_files ${ooc_module}_OOC.dcp]
+  }
+  add_files -quiet ${top_dcp}
+
+  # Link design (stitch OOC syntheses together)
+  set linked_dcp ${DCP_DIR}/${top_name}_opt.dcp
+  if {
+    ([ file exist ${linked_dcp} ] == 1) &&
+    ([ file mtime ${linked_dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
+  } {
+    puts "Found linked design dcp, not re-linking"
+    add_files ${linked_dcp}
+    open_checkpoint ${linked_dcp}
+  } else {
+    link_design -top ${top_name} -part ${PART}
+    opt_design
+    write_checkpoint -force ${linked_dcp}
+  }
+
+  # Placement
+  place_design
+  phys_opt_design
+  write_checkpoint -force ${DCP_DIR}/${top_name}_placed.dcp
+
+  # Routing
+  route_design
+  phys_opt_design
+  write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
+
+  # Reports
+  report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.rpt
+  report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
+
+  # Bitstream
+  write_bitstream -force ${BITSTREAM}
 } else {
+  # Synth
   synth_design -top ${top_name} -part ${PART}
-  write_checkpoint -force -noxdef ${top_dcp}
+  write_checkpoint -force -noxdef ${DCP_DIR}/${top_name}.dcp
   file mkdir ${RPT_DIR}/${top_name}
   report_utilization -hierarchical -file ${RPT_DIR}/${top_name}/util_synth.rpt \
     -pb ${RPT_DIR}/${top_name}/util_synth.pb
-}
 
-# Vivado scripts do this and this seems to allow opt_design after
-# link_design
-create_project -in_memory -part ${PART}
+  # Just to be sure
+  add_files -quiet ${DCP_DIR}/${top_name}.dcp
 
-# Re-add files
-foreach ooc_module ${ooc_modules} {
-  add_files -quiet ${DCP_DIR}/${ooc_module}_OOC.dcp
-  set_property netlist_only true [get_files ${ooc_module}_OOC.dcp]
-}
-add_files -quiet ${top_dcp}
-
-# Link design (stitch OOC syntheses together)
-set linked_dcp ${DCP_DIR}/${top_name}_opt.dcp
-if {
-  ([ file exist ${linked_dcp} ] == 1) &&
-  ([ file mtime ${linked_dcp} ] >= [ file mtime ${THIS_SCRIPT} ])
-} {
-  puts "Found linked design dcp, not re-linking"
-  add_files ${linked_dcp}
-  open_checkpoint ${linked_dcp}
-} else {
-  link_design -top ${top_name} -part ${PART}
+  # Opt
   opt_design
-  write_checkpoint -force ${linked_dcp}
+  write_checkpoint -force ${DCP_DIR}/${top_name}_opt.dcp
+
+  # Placement
+  place_design
+  phys_opt_design
+  write_checkpoint -force ${DCP_DIR}/${top_name}_placed.dcp
+
+  # Routing
+  route_design
+  phys_opt_design
+  write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
+
+  # Reports
+  report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.rpt
+  report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
+
+  # Bitstream
+  write_bitstream -force ${BITSTREAM}
 }
-
-# Placement
-place_design
-phys_opt_design
-write_checkpoint -force ${DCP_DIR}/${top_name}_placed.dcp
-
-# Routing
-route_design
-phys_opt_design
-write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
-
-# Reports
-report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.rpt
-report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
-
-# Bitstream
-write_bitstream -force ${BITSTREAM}

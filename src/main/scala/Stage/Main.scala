@@ -46,8 +46,8 @@ object Main {
     )
 
     // Create SLR assignment constraints
-    // val slrCstr = new SLRConstraints(param, "u200")
-    // slrCstr.create(hwDir)
+    val slrCstr = new SLRConstraints(param, "u200")
+    slrCstr.create(hwDir)
 
     // Generate header for software part
     val drvDefs = new DriverDefsHeader(param)
