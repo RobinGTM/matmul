@@ -148,7 +148,6 @@ class Worker(
   val gotLastInputReg = RegInit(false.B)
   // MAC pipeline ticks (should be set by MAC class)
   val MAC_TICKS       = mac.DELAY_TICKS
-  println(s"MAC ticks: ${MAC_TICKS}")
   val waitForMacReg   = RegInit(0.U((MAC_TICKS).W))
   when(wid === 0.U) {
     // Wait for MAC pipeline
