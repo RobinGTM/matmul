@@ -34,6 +34,8 @@ class SAFAcc(
   private val DW = 32
   private val EW = 8
   private val MW = 23
+  // Expose delay ticks to upper levels
+  val DELAY_TICKS = 2
 
   /* I/O */
   val io = IO(new GenericAccInterface(SAF_W))
@@ -101,20 +103,6 @@ class SAFAcc(
     accEmReg := (shiftedIEm +& shiftedAccEm) >> (corrReg << L)
   }
 
-  // // Output normalization // PIPELINE???
-  // val outRe = Wire(UInt((EW - L).W))
-  // val outEm = Wire(UInt(W.W))
-  // when(msbPos > (W - 1).U) {
-  //   outRe := accReReg + 1.U
-  //   outEm := (accEmReg >> (1.U << L))(W - 1, 0).asUInt
-  // } .otherwise {
-  //   outRe := accReReg
-  //   outEm := accEmReg.asUInt
-  // }
-
   // Output
-  io.o_res := Cat(accReReg, accEmReg(W - 1, 0))
-  // Control
-  // val outF32 = restoreF32(SAFToExpF32(io.o_res))
-  // dontTouch(outF32)
+  io.o_res := Cat(RegNext(accReReg), accEmReg(W - 1, 0))
 }

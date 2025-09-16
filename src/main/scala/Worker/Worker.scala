@@ -42,6 +42,15 @@ class Worker(
   val i   = IO(Input(new WorkerInterface(PARAM.DW)))
   val o   = IO(Output(new WorkerInterface(PARAM.DW)))
 
+  /* MAC MODULE */
+  val mac = Module(new MAC(
+    PARAM.USE_HARDFLOAT,
+    PARAM.DW,
+    PARAM.SAF_L,
+    PARAM.SAF_W,
+    PARAM.MAC_DSP_PIPELINE_REGS
+  ))
+
   /* INTERNALS */
   // Input buffer
   val iReg    = RegNext(i)
@@ -137,12 +146,9 @@ class Worker(
   // Send result logic
   val sendAcc = Wire(Bool())
   val gotLastInputReg = RegInit(false.B)
-  // Additional pipeline ticks
-  // When using SAF: accumulator is pipelined (1 tick) and conversion
-  // to expanded F32 is pipelined (4 ticks)
-  // Ticks: 1 || 6 (tested)
-  val MAC_ADD_TICKS   = if(PARAM.USE_HARDFLOAT) { 2 } else { 7 }
-  val MAC_TICKS       = PARAM.MAC_DSP_PIPELINE_REGS + MAC_ADD_TICKS
+  // MAC pipeline ticks (should be set by MAC class)
+  val MAC_TICKS       = mac.DELAY_TICKS
+  println(s"MAC ticks: ${MAC_TICKS}")
   val waitForMacReg   = RegInit(0.U((MAC_TICKS).W))
   when(wid === 0.U) {
     // Wait for MAC pipeline
@@ -201,14 +207,7 @@ class Worker(
   // mPtrReg reaches its max again, accumulation is done, so send
   // accumulator content to next worker with write flag on
 
-  /* MAC MODULE */
-  val mac = Module(new MAC(
-    PARAM.USE_HARDFLOAT,
-    PARAM.DW,
-    PARAM.SAF_L,
-    PARAM.SAF_W,
-    PARAM.MAC_DSP_PIPELINE_REGS
-  ))
+  /* MAC WIRING */
   when(RegNext(iReg.valid & ~iReg.prog & ~iReg.write)) {
     mac.io.i_a := coeff
     mac.io.i_b := RegNext(iReg.data)

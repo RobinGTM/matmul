@@ -63,11 +63,14 @@ class MAC(
   acc.io.i_in  := macReg
 
   // Output
-  if(USE_HARDFLOAT) {
+  val DELAY_TICKS = 1 + acc.DELAY_TICKS + mul.DELAY_TICKS + (if(USE_HARDFLOAT) {
     io.o_res := acc.io.o_res
+    0
   } else {
     val outConv      = withReset(io.i_rst) { Module(new SAFToExpF32(DW, SAF_L, SAF_W)) }
     outConv.i_saf   := acc.io.o_res
     io.o_res        := outConv.o_ef32
-  }
+    outConv.DELAY_TICKS
+  })
+
 }

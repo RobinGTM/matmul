@@ -43,6 +43,7 @@ class AccWrapper(
   /* ACC */
   val acc : Module {
     def io : GenericAccInterface
+    def DELAY_TICKS : Int
   } = if(USE_HARDFLOAT) {
     Module(new HardAcc(DW, 8, 24))
   } else {
@@ -51,4 +52,7 @@ class AccWrapper(
 
   /* WIRING */
   acc.io <> io
+
+  // Expose delay ticks to upper levels
+  val DELAY_TICKS = acc.DELAY_TICKS
 }

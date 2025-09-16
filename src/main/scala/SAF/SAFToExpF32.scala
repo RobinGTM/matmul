@@ -28,6 +28,8 @@ class SAFToExpF32(
   W  : Int = 70
 ) extends Module {
   private val SAF_W = W + 8 - L
+  // Expose delay to upper levels
+  val DELAY_TICKS = 4
 
   /* I/O */
   val i_saf  = IO(Input(UInt(SAF_W.W)))

@@ -39,6 +39,7 @@ class SAFMul(
   require(W >= MW + (1 << L))
   // Float bias
   private val FB = 127
+  val DELAY_TICKS = DSP_PIPELINE_REGS
 
   /* I/O */
   val i_a   = IO(Input(UInt(DW.W)))
@@ -55,7 +56,6 @@ class SAFMul(
   val sign = i_a(24) ^ i_b(24)
   // Zero and negative flags
   val eitherZero = (exA === 0.U & maA === 0.U) | (exB === 0.U & maB === 0.U)
-  val isNeg      = maA(24) ^ maB(24)
 
   // Product exponent (9 bits)
   // Overflow: set exponent to all 1s (infinity)

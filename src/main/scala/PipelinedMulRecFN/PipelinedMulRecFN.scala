@@ -106,6 +106,8 @@ class PipelinedMulRecFN(
     val out            = Output(UInt((EXP_W + SIG_W + 1).W))
     val exceptionFlags = Output(UInt(5.W))
   })
+  // Expose delay to upper levels
+  val DELAY_TICKS = DSP_PIPELINE_REGS
 
   /* MULTIPLIER */
   val mulRawFN = Module(new PipelinedMulRawFN(EXP_W, SIG_W, DSP_PIPELINE_REGS))

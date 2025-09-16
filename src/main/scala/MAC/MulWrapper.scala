@@ -37,17 +37,19 @@ class MulWrapper(
   private val OUT_WIDTH = if(USE_HARDFLOAT) { DW } else { SAF_WIDTH }
   val io = IO(new GenericMulInterface(USE_HARDFLOAT, DW, SAF_WIDTH))
 
-  if(USE_HARDFLOAT) {
+  val DELAY_TICKS = if(USE_HARDFLOAT) {
     val mul = Module(new PipelinedMulRecFN(8, 24, DSP_PIPELINE_REGS))
     mul.io.roundingMode   := 0.U
     mul.io.detectTininess := 0.U
     mul.io.a              := io.i_a
     mul.io.b              := io.i_b
     io.o_res              := mul.io.out
+    mul.DELAY_TICKS
   } else {
     val mul = Module(new SAFMul(DW, SAF_L, SAF_W, DSP_PIPELINE_REGS))
     mul.i_a  := io.i_a
     mul.i_b  := io.i_b
     io.o_res := mul.o_saf
+    mul.DELAY_TICKS
   }
 }

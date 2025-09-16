@@ -30,6 +30,8 @@ class HardAcc(
   EXP_W : Int = 8,
   SIG_W : Int = 24
 ) extends Module {
+  val DELAY_TICKS = 1
+
   /* I/O */
   val io = IO(new GenericAccInterface(DW))
 
