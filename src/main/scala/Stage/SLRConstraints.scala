@@ -109,7 +109,8 @@ class SLRConstraints(param : Parameters, model : String = "u200") {
     var outString = ""
     outString = outString + "## Communication layer\n"
     // XDMA
-    outString = outString + slrCstrPrefix + s"SLR${comSlr} [get_cells xdma/*]\n"
+    outString = outString + slrCstrPrefix + s"SLR${comSlr} [get_cells -hierarchical xdma]\n"
+    outString = outString + slrCstrPrefix + s"SLR${comSlr} [get_cells -hierarchical axiW]\n"
     outString = outString + "## MatMul\n"
 
     for(slr <- 0 to slrAssignments.length - 1) {
@@ -117,9 +118,9 @@ class SLRConstraints(param : Parameters, model : String = "u200") {
         outString = outString + s"# SLR${slr}\n"
         for(blk <- 0 to slrAssignments(slr).length - 1) {
           var currBlk = slrAssignments(slr)(blk)
-          var blkStr = s"core/core/matmulCore/workers_${currBlk}/*"
+          var blkStr = s"workers_${currBlk}"
           outString = outString +
-          slrCstrPrefix + s"SLR${slr}" + " " + s"[get_cells ${blkStr}]\n"
+          slrCstrPrefix + s"SLR${slr}" + " " + s"[get_cells -hierarchical ${blkStr}]\n"
         }
       }
     }

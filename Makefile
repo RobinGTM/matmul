@@ -97,6 +97,8 @@ LOG_DIR        := $(CHISELDIR)/$(LOG)
 BITSTREAM      := $(CHISELDIR)/$(TOP_NAME).bit
 # Defaults to Alveo U200
 VIVADO_PART     = xcu200-fsgd2104-2-e
+# User-defined SLR constraints
+USER_SLR_CSTRS := 0
 
 default: host
 

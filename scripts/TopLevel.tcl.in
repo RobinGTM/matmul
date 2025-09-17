@@ -15,9 +15,6 @@ set_param general.maxThreads //NPROC//
 read_verilog -sv [glob ${CHISEL_DIR}/hw/*.sv]
 read_ip src/main/ip/xdma/xdma_0.xci
 read_xdc [glob src/main/xdc/*.xdc]
-if { ${USER_SLR_CSTRS} == 1 } {
-  read_xdc [glob ${CHISEL_DIR}/hw/*.xdc]
-}
 
 if { ${OOC} == 1 } {
   # Synthesis
@@ -99,23 +96,6 @@ if { ${OOC} == 1 } {
     opt_design
     write_checkpoint -force ${linked_dcp}
   }
-
-  # Placement
-  place_design
-  phys_opt_design
-  write_checkpoint -force ${DCP_DIR}/${top_name}_placed.dcp
-
-  # Routing
-  route_design
-  phys_opt_design
-  write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
-
-  # Reports
-  report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.rpt
-  report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
-
-  # Bitstream
-  write_bitstream -force ${BITSTREAM}
 } else {
   # Synth
   synth_design -top ${top_name} -part ${PART}
@@ -130,21 +110,26 @@ if { ${OOC} == 1 } {
   # Opt
   opt_design
   write_checkpoint -force ${DCP_DIR}/${top_name}_opt.dcp
-
-  # Placement
-  place_design
-  phys_opt_design
-  write_checkpoint -force ${DCP_DIR}/${top_name}_placed.dcp
-
-  # Routing
-  route_design
-  phys_opt_design
-  write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
-
-  # Reports
-  report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.rpt
-  report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
-
-  # Bitstream
-  write_bitstream -force ${BITSTREAM}
 }
+
+if { ${USER_SLR_CSTRS} == 1 } {
+  set SLR_XDC ${CHISEL_DIR}/hw/*slr_assignments*.xdc
+  read_xdc [glob ${SLR_XDC}]
+}
+
+# Placement
+place_design
+phys_opt_design
+write_checkpoint -force ${DCP_DIR}/${top_name}_placed.dcp
+
+# Routing
+route_design
+phys_opt_design
+write_checkpoint -force ${DCP_DIR}/${top_name}_routed.dcp
+
+# Reports
+report_utilization -hierarchical -file ${RPT_DIR}/post-impl-util.rpt
+report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
+
+# Bitstream
+write_bitstream -force ${BITSTREAM}

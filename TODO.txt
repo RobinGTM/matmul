@@ -2,14 +2,19 @@ x Wrap SAF/hard adders in single adder
 x same for muls
 x rework MAC
 x pipeline DSPs / workers / worker chain
-- test and validate
-- 312.5MHz!!!!!!!!!!!!!
+~ test and validate
+x 312.5MHz!!!!!!!!!!!!!
   x 300x300_saf
-  - 400x400_saf
+  x 400x400_saf
 x SAF pipelining????????????
 - why no XDMA dcp in TCL script??
-- Better BRAM mapping (output pipelining)
-  - SV inline blackbox
-  - Problem: writes filename at the end of generated SV
+x Better BRAM mapping (output pipelining)
+  x SV inline blackbox
+  x Problem: writes filename at the end of generated SV
+    (--split-verilog)
 
-- synth / impl all and benchmark again
+x synth / impl all and benchmark again
+
+- Make SLR constraints work and verify they impact timing closure
+  (seen on 10x5, not on 300x300)
+- Chisel annotations to generate XDC constraint files?
