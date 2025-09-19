@@ -78,11 +78,7 @@ EXE            := $(CHISELDIR)/sw/$(EXE_NAME)
 # Out-of-context enabled by default
 OOC             = 1
 # Create compilation script
-ifeq ($(OOC), 1)
 TCL_TEMPLATE   := scripts/$(TOP_NAME).tcl.in
-else
-TCL_TEMPLATE   := scripts/$(TOP_NAME)_noOOC.tcl.in
-endif
 # Compilation script location
 TCL            := $(CHISELDIR)/$(notdir $(TCL_TEMPLATE:%.in=%))
 # Vivado checkpoints
