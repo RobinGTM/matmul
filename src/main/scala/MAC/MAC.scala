@@ -63,7 +63,7 @@ class MAC(
   acc.io.i_in  := macReg
 
   // Output
-  val DELAY_TICKS = 1 + acc.DELAY_TICKS + mul.DELAY_TICKS + (if(USE_HARDFLOAT) {
+  val DELAY_TICKS = acc.DELAY_TICKS + mul.DELAY_TICKS + (if(USE_HARDFLOAT) {
     io.o_res := acc.io.o_res
     0
   } else {

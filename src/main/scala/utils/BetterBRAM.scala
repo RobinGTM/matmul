@@ -1,4 +1,4 @@
-/* BetterBRAM.scala -- Better block ram implementation
+/* BetterBRAM.scala -- Better block RAM implementation
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
@@ -24,6 +24,11 @@ import chisel3.util._
 
 import matmul.utils._
 
+// BetterBRAM allows pipelining BRAM primitives by specifying
+// additional output registers
+// https://www.reddit.com/r/FPGA/comments/157usj0/bram_outpout_pipeline_and_module_boundaries_in/
+// UG1387 -- Inferring RAM and ROM
+// https://docs.amd.com/r/en-US/ug1387-acap-hardware-ip-platform-dev-methodology/Performance-Considerations-When-Implementing-RAM
 class BetterBRAM(
   DW                   : Int = 32,
   SIZE                 : Int = 1024,
@@ -40,6 +45,8 @@ class BetterBRAM(
     val i_en   = Input(Bool())
     val o_data = Output(UInt(DW.W))
   })
+  // Expose output delay to upper modules
+  val OUTPUT_ADD_TICKS = OUTPUT_PIPELINE_REGS
 
   /* BEHAVIOR */
   setInline("BetterBRAM.sv",

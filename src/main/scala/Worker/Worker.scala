@@ -147,13 +147,13 @@ class Worker(
   val sendAcc = Wire(Bool())
   val gotLastInputReg = RegInit(false.B)
   // MAC pipeline ticks (should be set by MAC class)
-  val MAC_TICKS       = mac.DELAY_TICKS
-  val waitForMacReg   = RegInit(0.U((MAC_TICKS).W))
+  val DELAY_TICKS     = mac.DELAY_TICKS + wkMem.OUTPUT_ADD_TICKS
+  val waitForMacReg   = RegInit(0.U((DELAY_TICKS).W))
   when(wid === 0.U) {
     // Wait for MAC pipeline
     when(iReg.valid & ~iReg.prog & (RegNext(mPtrReg) === (PARAM.M_WIDTH - 1).U)) {
       gotLastInputReg := true.B
-      waitForMacReg   := -1.S(MAC_TICKS.W).asUInt
+      waitForMacReg   := -1.S(DELAY_TICKS.W).asUInt
     }
     // Wait for MAC pipeline (shift register)
     when(gotLastInputReg) {
