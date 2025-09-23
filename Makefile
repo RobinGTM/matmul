@@ -117,7 +117,7 @@ help:
 $(CHISELDIR):
 	mkdir -p $(CHISELDIR)
 
-$(SYSTEMVERILOG): $(CHISELDIR)
+$(SYSTEMVERILOG): $(CHISELDIR) $(shell find src/main/scala -name '*.scala')
 	sbt --batch --color=always --mem $(SBT_MEM) $(SBT_RUN_CMD)
 .PHONY: hw
 hw: $(SYSTEMVERILOG)
@@ -133,7 +133,7 @@ $(EXE): $(OBJS) $(SYSTEMVERILOG) $(CHISELDIR)
 host: $(EXE)
 
 VAR_LIST := $(shell sed -rn 's#^[^/]*//([^/]+)//$$#\1#p' $(TCL_TEMPLATE))
-$(TCL): $(CHISELDIR)
+$(TCL): $(CHISELDIR) $(TCL_TEMPLATE)
 	rm -f $(TCL)
 	cp $(TCL_TEMPLATE) $(TCL)
 	@$(foreach var,$(VAR_LIST), \
