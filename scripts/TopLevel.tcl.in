@@ -57,14 +57,15 @@ if {
     CONFIG.pcie_blk_locn {X1Y2}
   } [get_ips xdma]
 }
-# Don't OOC XDMA
-set_property generate_synth_checkpoint false [get_files xdma.xci]
 
 set_property BOARD_PART xilinx.com:au200:part0:1.3 [current_project]
 read_ip          ${xdma_xci}
 read_verilog -sv [glob ../hw/*.sv]
 read_xdc         [glob ${MATMUL_DIR}/src/main/xdc/*.xdc]
 # read_ip ${MATMUL_DIR}/src/main/ip/xdma/xdma_0.xcix
+
+# Don't OOC XDMA
+set_property generate_synth_checkpoint false [get_files ${xdma_xci}]
 
 # # Update compile order
 # update_compile_order -fileset [current_fileset]
@@ -104,8 +105,7 @@ if { ${OOC} == 1 } {
     AXIS2FIFO \
     FIFO2AXIS \
     MCPCross2RegAdapter \
-    MatMulController \
-    TopLevel
+    MatMulController
   }
 
   # Other OOC modules
@@ -125,7 +125,7 @@ if { ${OOC} == 1 } {
       # Vivado does this
       # set_param constraints.enableBinaryConstraints false
       file mkdir ${EDF_DIR}/${ooc_module}
-      # write_edif -force ${edf}
+      write_edif -force ${edf}
       write_checkpoint -force -noxdef ${dcp}
       file mkdir ${RPT_DIR}/${ooc_module}
       report_utilization -hierarchical -file $RPT_DIR/${ooc_module}/util_synth.rpt \
@@ -135,7 +135,14 @@ if { ${OOC} == 1 } {
     # Prevent stitching in top-level synthesis
     set_property used_in_implementation false [get_files ${dcp}]
   }
- 
+
+  # Top-level
+  set top_dcp ${DCP_DIR}/${top_name}.dcp
+  synth_design -top ${top_name} -part ${PART}
+  write_checkpoint -force ${top_dcp}
+  report_utilization -hierarchical -file ${RPT_DIR}/${top_name}/util_synth.rpt \
+    -pb ${RPT_DIR}/${top_name}/util_synth.pb
+
   # Vivado scripts do this and this seems to allow opt_design after
   # link_design
   create_project -in_memory -part ${PART} -name link_impl_prj
@@ -150,7 +157,7 @@ if { ${OOC} == 1 } {
   read_ip ${xdma_xci}
 
   # Read dcp and edf
-  foreach ooc_module [concat ${ooc_module} TopLevel] {
+  foreach ooc_module ${ooc_module} {
     read_checkpoint ${DCP_DIR}/${ooc_module}_OOC.dcp
     # Prevent stitching in top-level synthesis
     set_property used_in_implementation false [get_files ${ooc_module}_OOC.dcp]
@@ -166,6 +173,9 @@ if { ${OOC} == 1 } {
   # add_files ${xdma_xci}
   # add_files ${xdma_dcp}
 
+  # Read top-level DCP
+  read_checkpoint ${top_dcp}
+
   # Link design (stitch OOC syntheses together)
   set linked_dcp ${DCP_DIR}/${top_name}_linked.dcp
   if {
@@ -179,7 +189,8 @@ if { ${OOC} == 1 } {
     set_property used_in_synthesis false [get_files matmul.xdc]
     set_property used_in_implementation false [get_files dont_touch.xdc]
     # Read netlists
-    # read_edif [glob ${EDF_DIR}/*/*]
+    read_edif [glob ${EDF_DIR}/*/*]
+    # Link
     link_design -top ${top_name} -part ${PART}
     write_checkpoint -force ${linked_dcp}
   }
