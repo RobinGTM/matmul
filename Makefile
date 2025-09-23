@@ -1,9 +1,9 @@
 # Set default shell (for using bash syntax in shells)
 SHELL           = /bin/bash
+# Project directory
+MATMULDIR      := $(shell pwd)
 # Main build directory
 BUILDDIR        = build
-# Absolute version
-BUILDDIR_ABS    = $(PWD)/$(BUILDDIR)
 # Number of processors
 NPROC           = $(shell nproc)
 
@@ -36,7 +36,7 @@ SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
 -mpd $(DSP_DEPTH) -ppd $(PIPELINE_DEPTH) \
 -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
 -fbase $(BASE_FREQ) \
--o $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)
+-o $(BUILDDIR)/$(CHISEL_OUTDIR)
 # Additional flags for circt and firtool
 CIRCT_FLAGS    := "--split-verilog"
 ifdef CIRCT_FLAGS
@@ -80,7 +80,7 @@ OOC             = 1
 # Create compilation script
 TCL_TEMPLATE   := scripts/$(TOP_NAME).tcl.in
 # Compilation script location
-TCL            := $(CHISELDIR)/$(notdir $(TCL_TEMPLATE:%.in=%))
+TCL            := $(MATMULDIR)/$(CHISELDIR)/$(notdir $(TCL_TEMPLATE:%.in=%))
 # Vivado checkpoints
 DCP             = dcp
 DCP_DIR        := $(CHISELDIR)/$(DCP)
@@ -90,7 +90,8 @@ RPT_DIR        := $(CHISELDIR)/$(RPT)
 # Vivado logs
 LOG             = log
 LOG_DIR        := $(CHISELDIR)/$(LOG)
-BITSTREAM      := $(CHISELDIR)/$(TOP_NAME).bit
+BITSTREAM_NAME := $(TOP_NAME).bit
+BITSTREAM      := $(CHISELDIR)/$(BITSTREAM_NAME)
 # Defaults to Alveo U200
 VIVADO_PART     = xcu200-fsgd2104-2-e
 # User-defined SLR constraints
@@ -146,8 +147,10 @@ tcl: $(TCL)
 $(BITSTREAM): $(SYSTEMVERILOG) $(TCL)
 	rm -rf $(RPT_DIR)
 	@mkdir -p $(LOG_DIR)
-	vivado -mode batch -source $(TCL) \
-	  -log $(LOG_DIR)/$(TOP_NAME).log -journal $(LOG_DIR)/$(TOP_NAME).jou
+	@mkdir -p $(CHISELDIR)/run
+	cd $(CHISELDIR)/run; \
+	  vivado -mode batch -source ../$(notdir $(TCL)) \
+	    -log ../$(LOG)/$(TOP_NAME).log -journal ../$(LOG)/$(TOP_NAME).jou
 .PHONY: bitstream
 bitstream: $(BITSTREAM)
 
@@ -157,13 +160,10 @@ all: $(SYSTEMVERILOG) $(OBJS) $(EXE) $(BITSTREAM)
 
 .PHONY: clean
 clean:
-#	find $(BUILDDIR_ABS) -name '*.log' -delete
-#	find $(BUILDDIR_ABS) -name '*.jou' -delete
-	rm -rf $(BUILDDIR_ABS)/$(CHISEL_OUTDIR)
+	rm -rf $(BUILDDIR)/$(CHISEL_OUTDIR)
 
 .PHONY: distclean
 distclean: clean
-#	find $(BUILDDIR_ABS) -name 'matmul*' -delete
 #	find . -name '*.o' -delete
 #	rm -rf project
 #	rm -rf target

@@ -27,7 +27,7 @@ import chisel3.experimental._
 // Local
 import axi.interfaces._
 
-class xdma_0 extends BlackBox {
+class xdma extends BlackBox {
   val io = IO(new Bundle {
     // System clk / rstn
     val sys_clk        = Input(Clock())

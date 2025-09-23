@@ -97,7 +97,7 @@ class TopLevel(
   val axi_aresetn = Wire(Bool())
 
   // XDMA instance (black-box)
-  val xdma = Module(new xdma_0)
+  val xdma = Module(new xdma)
 
   // AXI wrapper
   val axiW = Module(new AXIWrapper(
