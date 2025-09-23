@@ -140,6 +140,7 @@ if { ${OOC} == 1 } {
   set top_dcp ${DCP_DIR}/${top_name}.dcp
   synth_design -top ${top_name} -part ${PART}
   write_checkpoint -force ${top_dcp}
+  [file mkdir ${RPT_DIR}/${top_name}]
   report_utilization -hierarchical -file ${RPT_DIR}/${top_name}/util_synth.rpt \
     -pb ${RPT_DIR}/${top_name}/util_synth.pb
 
