@@ -233,7 +233,3 @@ report_timing_summary -file ${RPT_DIR}/post-impl-timing.rpt
 
 # Bitstream
 write_bitstream -force ../${BITSTREAM_NAME}
-
-# Gracefully close
-close_project
-close_project
