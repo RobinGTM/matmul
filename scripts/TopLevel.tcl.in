@@ -67,15 +67,16 @@ read_xdc         [glob ${MATMUL_DIR}/src/main/xdc/*.xdc]
 # Don't OOC XDMA
 set_property generate_synth_checkpoint false [get_files ${xdma_xci}]
 
+# Generate XDMA products
+set_property used_in_synthesis false [get_files matmul.xdc]
+set_property used_in_implementation false [get_files dont_touch.xdc]
+# Generate IP products
+generate_target all [get_ips xdma]
+catch { config_ip_cache -export [get_ips -all xdma] }
+export_ip_user_files -of_objects [get_ips xdma] -no_script -sync -force -quiet
+
 # Synthesis
 if { ${OOC} == 1 } {
-  set_property used_in_synthesis false [get_files matmul.xdc]
-  set_property used_in_implementation false [get_files dont_touch.xdc]
-  # Generate IP products
-  generate_target all [get_ips xdma]
-  catch { config_ip_cache -export [get_ips -all xdma] }
-  export_ip_user_files -of_objects [get_ips xdma] -no_script -sync -force -quiet
-
   # Synthesis
   # Out-of-context (OOC) synthesize every submodule
   set ooc_modules \
