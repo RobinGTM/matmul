@@ -210,7 +210,7 @@ if { ${OOC} == 1 } {
 }
 
 if { ${USER_SLR_CSTRS} == 1 } {
-  set SLR_XDC ${CHISEL_DIR}/hw/*slr_assignments*.xdc
+  set SLR_XDC ../hw/*slr_assignments*.xdc
   read_xdc [glob ${SLR_XDC}]
 }
 
