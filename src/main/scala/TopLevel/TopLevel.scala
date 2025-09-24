@@ -23,10 +23,14 @@ package matmul
 import chisel3._
 import chisel3.util._
 
+// Scala
+import math.log
+
 import matmul._
 import axi._
 import matmul.blackboxes._
 import matmul.utils.Parameters
+import asyncfifo._
 
 // XDMA example-inspired top-level module
 class TopLevel(
@@ -112,12 +116,6 @@ class TopLevel(
   // MatMul core
   val core = Module(new CoreWrapper(PARAM))
 
-  // FIFO memories
-  // IFIFO is deeper because coefficients (WIDTH * HEIGHT values)
-  // arrive there
-  val iFifoMem = SyncReadMem(PARAM.IFIFO_DEPTH, UInt(32.W))
-  val oFifoMem = SyncReadMem(PARAM.OFIFO_DEPTH, UInt(32.W))
-
   /* WIRING */
   // Coreclk wiring
   core.i_coreclk := coreclk_bufed
@@ -127,11 +125,11 @@ class TopLevel(
   core.ctl_wr_xdst <> axiW.ctl_wr_xsrc
   core.ctl_ar_xdst <> axiW.ctl_ar_xsrc
   core.ctl_rd_xsrc <> axiW.ctl_rd_xdst
-  // FIFO clock-domain crossing counters
-  core.ififo_xwcnt <> axiW.ififo_xwcnt
-  core.ififo_xrcnt <> axiW.ififo_xrcnt
-  core.ofifo_xrcnt <> axiW.ofifo_xrcnt
-  core.ofifo_xwcnt <> axiW.ofifo_xwcnt
+  // // FIFO clock-domain crossing counters
+  // core.ififo_xwcnt <> axiW.ififo_xwcnt
+  // core.ififo_xrcnt <> axiW.ififo_xrcnt
+  // core.ofifo_xrcnt <> axiW.ofifo_xrcnt
+  // core.ofifo_xwcnt <> axiW.ofifo_xwcnt
 
   // XDMA wiring
   // SYS
@@ -153,25 +151,114 @@ class TopLevel(
   pci_exp_txn         := xdma.io.pci_exp_txn
   pci_exp_txp         := xdma.io.pci_exp_txp
 
-  /* FIFO MEMORY LOGIC */
-  // Output FIFO
-  // Write
-  when(core.ofifo_wmem.i_we) {
-    oFifoMem.write(core.ofifo_wmem.i_addr, core.ofifo_wmem.i_data, coreclk_bufed)
+  /* FIFOS */
+  PARAM.FIFO_TYPE match {
+    case "xpm" =>
+      // XPM FIFOs
+      val iFifo = Module(new xpm_fifo_async(
+        FIFO_WRITE_DEPTH    = PARAM.IFIFO_DEPTH,
+        FIFO_READ_LATENCY   = 1,
+        RD_DATA_COUNT_WIDTH = PARAM.IFIFO_CNT_W + 1,
+        READ_DATA_WIDTH     = 32, // binary32 float
+        WR_DATA_COUNT_WIDTH = PARAM.IFIFO_CNT_W + 1,
+        WRITE_DATA_WIDTH    = 32 // binary32 float
+      ))
+      val oFifo = Module(new xpm_fifo_async(
+        FIFO_WRITE_DEPTH    = PARAM.OFIFO_DEPTH,
+        FIFO_READ_LATENCY   = 1,
+        RD_DATA_COUNT_WIDTH = PARAM.OFIFO_CNT_W + 1,
+        READ_DATA_WIDTH     = 32, // binary32 float
+        WR_DATA_COUNT_WIDTH = PARAM.OFIFO_CNT_W + 1,
+        WRITE_DATA_WIDTH    = 32 // binary32 float
+      ))
+
+      // XPM FIFO wiring
+      // Input FIFO is from AXIWrapper to CoreWrapper
+      iFifo.io.rst           := ~sys_rst_n_c
+      iFifo.io.sleep         := false.B
+      iFifo.io.injectdbiterr := false.B
+      iFifo.io.injectsbiterr := false.B
+      oFifo.io.rst           := ~sys_rst_n_c
+      oFifo.io.sleep         := false.B
+      oFifo.io.injectdbiterr := false.B
+      oFifo.io.injectsbiterr := false.B
+      // Write port
+      iFifo.io.wr_clk        := axi_aclk // Not a free-running clock but uuuuh
+      iFifo.io.wr_en         := axiW.ififo_wr.i_we
+      iFifo.io.din           := axiW.ififo_wr.i_data
+      axiW.ififo_wr.o_ready  := ~iFifo.io.full
+      // Read port
+      iFifo.io.rd_clk        := coreclk_bufed
+      iFifo.io.rd_en         := core.ififo_rd.i_en
+      core.ififo_rd.o_data   := iFifo.io.dout
+      core.ififo_rd.o_nempty := ~iFifo.io.empty
+      // Ouptut FIFO is from CoreWrapper to AXIWrapper
+      // Write port
+      oFifo.io.wr_clk        := coreclk_bufed
+      oFifo.io.wr_en         := core.ofifo_wr.i_we
+      oFifo.io.din           := core.ofifo_wr.i_data
+      core.ofifo_wr.o_ready  := ~oFifo.io.full
+      // Read port
+      oFifo.io.rd_clk        := axi_aclk
+      oFifo.io.rd_en         := axiW.ofifo_rd.i_en
+      axiW.ofifo_rd.o_data   := oFifo.io.dout
+      axiW.ofifo_rd.o_nempty := ~oFifo.io.empty
+    case "default" =>
+      // FIFO memories
+      val iFifoMem = SyncReadMem(PARAM.IFIFO_DEPTH, UInt(32.W))
+      val oFifoMem = SyncReadMem(PARAM.OFIFO_DEPTH, UInt(32.W))
+
+      // Input FIFO ports
+      val iFifoWrPort = withClockAndReset(axi_aclk, ~axi_aresetn) {
+        Module(new AsyncFIFOWritePort(PARAM.IFIFO_CNT_W, UInt(32.W)))
+      }
+      val iFifoRdPort = withClockAndReset(coreclk_bufed, ~sys_rst_n_c) {
+        Module(new AsyncFIFOReadPort(PARAM.IFIFO_CNT_W, UInt(32.W)))
+      }
+      // Output FIFO ports
+      val oFifoWrPort = withClockAndReset(coreclk_bufed, ~sys_rst_n_c) {
+        Module(new AsyncFIFOWritePort(PARAM.OFIFO_CNT_W, UInt(32.W)))
+      }
+      val oFifoRdPort = withClockAndReset(axi_aclk, ~axi_aresetn) {
+        Module(new AsyncFIFOReadPort(PARAM.OFIFO_CNT_W, UInt(32.W)))
+      }
+
+      // Cross-clock domain FIFO counter synchronization
+      iFifoWrPort.wcnt_cross <> iFifoRdPort.wcnt_cross
+      iFifoWrPort.rcnt_cross <> iFifoRdPort.rcnt_cross
+      oFifoWrPort.wcnt_cross <> oFifoRdPort.wcnt_cross
+      oFifoWrPort.rcnt_cross <> oFifoRdPort.rcnt_cross
+
+      // AXIWrapper wiring
+      axiW.ififo_wr <> iFifoWrPort.fifo_wr
+      axiW.ofifo_rd <> oFifoRdPort.fifo_rd
+      // CoreWrapper wiring
+      core.ififo_rd <> iFifoRdPort.fifo_rd
+      core.ofifo_wr <> oFifoWrPort.fifo_wr
+
+      // Output FIFO
+      // Write
+      when(oFifoWrPort.mem.i_we) {
+        oFifoMem.write(oFifoWrPort.mem.i_addr, oFifoWrPort.mem.i_data, coreclk_bufed)
+      }
+      // Read
+      oFifoRdPort.mem.o_data := oFifoMem.read(
+        oFifoRdPort.mem.i_addr,
+        oFifoRdPort.mem.i_en,
+        axi_aclk
+      )
+      // Input FIFO
+      // Write
+      when(iFifoWrPort.mem.i_we) {
+        iFifoMem.write(iFifoWrPort.mem.i_addr, iFifoWrPort.mem.i_data, axi_aclk)
+      }
+      // Read
+      iFifoRdPort.mem.o_data := iFifoMem.read(
+        iFifoRdPort.mem.i_addr, iFifoRdPort.mem.i_en, coreclk_bufed
+      )
+    case _ =>
+      require(PARAM.FIFO_TYPE == "xpm" || PARAM.FIFO_TYPE == "default",
+        "[TopLevel] PARAM.FIFO_TYPE must be either 'xpm' or 'default'"
+      )
   }
-  // Read
-  axiW.ofifo_rmem.o_data := oFifoMem.read(
-    axiW.ofifo_rmem.i_addr,
-    axiW.ofifo_rmem.i_en,
-    axi_aclk
-  )
-  // Input FIFO
-  // Write
-  when(axiW.ififo_wmem.i_we) {
-    iFifoMem.write(axiW.ififo_wmem.i_addr, axiW.ififo_wmem.i_data, axi_aclk)
-  }
-  // Read
-  core.ififo_rmem.o_data := iFifoMem.read(
-    core.ififo_rmem.i_addr, core.ififo_rmem.i_en, coreclk_bufed
-  )
 }

@@ -101,8 +101,8 @@ package object utils {
     val BASE_CLK = parseOpt("BASE_CLK", "fbase", 156.25)
 
     // Core clock PLL
-    val PLL_MULT = parseOpt("PLL_MULT", "xpll", 9)
-    val PLL_DIV  = parseOpt("PLL_DIV", "dpll", 10)
+    val PLL_MULT = parseOpt("PLL_MULT", "xpll", 8)
+    val PLL_DIV  = parseOpt("PLL_DIV", "dpll", 4)
 
     // Matrix width (number of workers)
     val M_WIDTH  = parseOpt("M_WIDTH", "w", 16)
@@ -111,6 +111,13 @@ package object utils {
 
     // Use hardfloat if true else SAF
     val USE_HARDFLOAT = args.contains("-USE_HARDFLOAT") || args.contains("-hf")
+
+    // Use XPM for FIFOs
+    val FIFO_TYPE = parseOpt("FIFO_TYPE", "fifo", "default")
+    require(FIFO_TYPE == "xpm" || FIFO_TYPE == "default",
+      "FIFO_TYPE must be one of 'xpm' (Xilinx Parametrized Macros)" +
+      " or 'default' (custom Chisel implementation)"
+    )
 
     // Output directory
     private val hfString = if(USE_HARDFLOAT) { "hardfloat" } else { "saf" }
