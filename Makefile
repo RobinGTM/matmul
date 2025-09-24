@@ -115,11 +115,10 @@ help:
 	@echo "Set OOC to 0 (or anything other than 1) to disable \
 	out-of-context synthesis"
 
-# $(CHISELDIR):
-# 	mkdir -p $(CHISELDIR)
+$(CHISELDIR):
+	mkdir -p $(CHISELDIR)
 
-# $(SYSTEMVERILOG): $(CHISELDIR) $(shell find src/main/scala -name '*.scala')
-$(SYSTEMVERILOG): $(shell find src/main/scala -name '*.scala')
+$(SYSTEMVERILOG): $(CHISELDIR) $(shell find src/main/scala -name '*.scala')
 	sbt --batch --color=always --mem $(SBT_MEM) $(SBT_RUN_CMD)
 .PHONY: hw
 hw: $(SYSTEMVERILOG)
@@ -136,8 +135,7 @@ $(EXE): $(OBJS) $(SYSTEMVERILOG)
 host: $(EXE)
 
 VAR_LIST := $(shell sed -rn 's#^[^/]*//([^/]+)//$$#\1#p' $(TCL_TEMPLATE))
-# $(TCL): $(CHISELDIR) $(TCL_TEMPLATE)
-$(TCL): $(TCL_TEMPLATE)
+$(TCL): $(CHISELDIR) $(TCL_TEMPLATE)
 	rm -f $(TCL)
 	cp $(TCL_TEMPLATE) $(TCL)
 	@$(foreach var,$(VAR_LIST), \
