@@ -17,4 +17,9 @@ x synth / impl all and benchmark again
 
 - Make SLR constraints work and verify they impact timing closure
   (seen on 10x5, not on 300x300)
+  - ooooooor don't talk about it
+
 - Chisel annotations to generate XDC constraint files?
+
+x XPM_FIFO_ASYNC integration
+- merge xpm-fifos branch

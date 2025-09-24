@@ -36,6 +36,7 @@ SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
 -mpd $(DSP_DEPTH) -ppd $(PIPELINE_DEPTH) \
 -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
 -fbase $(BASE_FREQ) \
+-fifo $(FIFO_TYPE) \
 -o $(BUILDDIR)/$(CHISEL_OUTDIR)
 # Additional flags for circt and firtool
 CIRCT_FLAGS    := "--split-verilog"
@@ -80,7 +81,7 @@ OOC             = 1
 # Create compilation script
 TCL_TEMPLATE   := scripts/$(TOP_NAME).tcl.in
 # Compilation script location
-TCL            := $(MATMULDIR)/$(CHISELDIR)/$(notdir $(TCL_TEMPLATE:%.in=%))
+TCL            := $(CHISELDIR)/$(notdir $(TCL_TEMPLATE:%.in=%))
 # Vivado checkpoints
 DCP             = dcp
 DCP_DIR        := $(CHISELDIR)/$(DCP)
@@ -114,10 +115,11 @@ help:
 	@echo "Set OOC to 0 (or anything other than 1) to disable \
 	out-of-context synthesis"
 
-$(CHISELDIR):
-	mkdir -p $(CHISELDIR)
+# $(CHISELDIR):
+# 	mkdir -p $(CHISELDIR)
 
-$(SYSTEMVERILOG): $(CHISELDIR) $(shell find src/main/scala -name '*.scala')
+# $(SYSTEMVERILOG): $(CHISELDIR) $(shell find src/main/scala -name '*.scala')
+$(SYSTEMVERILOG): $(shell find src/main/scala -name '*.scala')
 	sbt --batch --color=always --mem $(SBT_MEM) $(SBT_RUN_CMD)
 .PHONY: hw
 hw: $(SYSTEMVERILOG)
@@ -126,14 +128,16 @@ $(OBJDIR)/%.o: $(CSRCDIR)/%.c $(SYSTEMVERILOG)
 	@mkdir -p $(OBJDIR)
 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) -c -o $@ $<
 
-$(EXE): $(OBJS) $(SYSTEMVERILOG) $(CHISELDIR)
+# $(EXE): $(OBJS) $(SYSTEMVERILOG) $(CHISELDIR)
+$(EXE): $(OBJS) $(SYSTEMVERILOG)
 	$(CC) $(CLIBFLAGS) $(CINCFLAGS) $(CFLAGS) \
 	  -o $@ $(OBJDIR)/*.o
 .PHONY: host
 host: $(EXE)
 
 VAR_LIST := $(shell sed -rn 's#^[^/]*//([^/]+)//$$#\1#p' $(TCL_TEMPLATE))
-$(TCL): $(CHISELDIR) $(TCL_TEMPLATE)
+# $(TCL): $(CHISELDIR) $(TCL_TEMPLATE)
+$(TCL): $(TCL_TEMPLATE)
 	rm -f $(TCL)
 	cp $(TCL_TEMPLATE) $(TCL)
 	@$(foreach var,$(VAR_LIST), \
