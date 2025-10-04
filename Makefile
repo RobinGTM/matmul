@@ -24,6 +24,7 @@ CORE_FREQ      := '$(BASE_FREQ) * $(PLL_MULT) / $(PLL_DIV)'
 CHISEL_OUTDIR   = matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT)-$(shell \
                     echo $(CORE_FREQ) | bc \
                   )MHz
+FIFO_TYPE       = default
 # Chisel output dir (passed to Chisel Main through '-o')
 CHISELDIR      := $(BUILDDIR)/$(CHISEL_OUTDIR)
 # Location of Chisel's output: this should match what Chisel does too
