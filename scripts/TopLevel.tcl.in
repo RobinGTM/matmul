@@ -63,7 +63,10 @@ set_property BOARD_PART xilinx.com:au200:part0:1.3 [current_project]
 set_property XPM_LIBRARIES {XPM_FIFO} [current_project]
 # Read sources
 read_ip          ${xdma_xci}
-read_verilog -sv [glob ../hw/*.sv]
+read_verilog -sv [glob ../hw/sv/*.sv]
+if { [ file exist ../hw/vhdl ] } {
+  read_vhdl -vhdl2008 -quiet [glob ../hw/vhdl/*.vhd*]
+}
 # Mandatory in non-project mode
 auto_detect_xpm
 read_xdc         [glob ${MATMUL_DIR}/src/main/xdc/*.xdc]
@@ -148,7 +151,10 @@ if { ${OOC} == 1 } {
   # Re-setup
   set_property XPM_LIBRARIES {XPM_FIFO} [current_project]
   # Re-read HDL
-  read_verilog -sv [glob ../hw/*.sv]
+  read_verilog -sv [glob ../hw/sv/*.sv]
+if { [ file exist ../hw/vhdl ] } {
+  read_vhdl -vhdl2008 -quiet [glob ../hw/vhdl/*.vhd*]
+}
   auto_detect_xpm
   # Re-read constraints in new project
   read_xdc [glob ${MATMUL_DIR}/src/main/xdc/*.xdc]

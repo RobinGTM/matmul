@@ -14,9 +14,14 @@ TOP_NAME       := TopLevel
 M_HEIGHT        = 16
 M_WIDTH         = 16
 FLOAT           = saf
-PLL_MULT        = 9
-PLL_DIV         = 10
+PLL_MULT        = 8
+PLL_DIV         = 4
+# Flopoco mult is not pipelined
+ifeq ($(FLOAT),flopoco)
+DSP_DEPTH       = 0
+else
 DSP_DEPTH       = 4
+endif
 PIPELINE_DEPTH  = 3
 # Fixed (hardware clock)
 BASE_FREQ      := 156.25
@@ -27,18 +32,21 @@ CHISEL_OUTDIR   = matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT)-$(shell \
 FIFO_TYPE       = default
 # Chisel output dir (passed to Chisel Main through '-o')
 CHISELDIR      := $(BUILDDIR)/$(CHISEL_OUTDIR)
+# HW dir
+HWDIR          := $(CHISELDIR)/hw
 # Location of Chisel's output: this should match what Chisel does too
-SYSTEMVERILOG  := $(CHISELDIR)/hw/$(TOP_NAME).sv
+SYSTEMVERILOG  := $(HWDIR)/sv/$(TOP_NAME).sv
 # SBT
 # Memory (kB)
 SBT_MEM         = 65535
 # Flags passed to Main
 SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
+-f $(FLOAT) \
 -mpd $(DSP_DEPTH) -ppd $(PIPELINE_DEPTH) \
 -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
 -fbase $(BASE_FREQ) \
 -fifo $(FIFO_TYPE) \
--o $(BUILDDIR)/$(CHISEL_OUTDIR)
+-o $(CHISELDIR)
 # Additional flags for circt and firtool
 CIRCT_FLAGS    := "--split-verilog"
 ifdef CIRCT_FLAGS
@@ -47,7 +55,6 @@ endif
 ifdef FIRTOOL_FLAGS
 SBT_RUN_FLAGS += -F \"$(FIRTOOL_FLAGS)\"
 endif
-SBT_RUN_FLAGS += $(shell [ x"$(FLOAT)" == x"hardfloat" ] && echo '-hf')
 
 # Vitis kernel compilation
 ifdef VITIS
@@ -76,13 +83,21 @@ EXE_NAME        = matmul-host
 # Executable location
 EXE            := $(CHISELDIR)/sw/$(EXE_NAME)
 
+# FloPoCo
+FLOPOCO        := flopoco
+FLOPOCO_DIR    := $(HWDIR)/vhdl/
+BUILD_FP        = 0
+FLOPOCO_DOCKER  = matmul/flopoco-docker:latest
+FLOPOCO_SRC    := external/flopoco
+FLOPOCO_VHDL   := $(FLOPOCO_DIR)/{InputIEEE.vhdl,OutputIEEE.vhdl,FPAdd.vhdl,FPMult.vhdl}
+
 # Vivado
 # Out-of-context enabled by default
 OOC             = 1
 # Create compilation script
 TCL_TEMPLATE   := scripts/$(TOP_NAME).tcl.in
 # Compilation script location
-TCL            := $(CHISELDIR)/$(notdir $(TCL_TEMPLATE:%.in=%))
+TCL            := $(shell readlink -f $(CHISELDIR))/$(notdir $(TCL_TEMPLATE:%.in=%))
 # Vivado checkpoints
 DCP             = dcp
 DCP_DIR        := $(CHISELDIR)/$(DCP)
@@ -119,10 +134,39 @@ help:
 $(CHISELDIR):
 	mkdir -p $(CHISELDIR)
 
+
+# Build docker if asked (needs docker buildx)
+$(FLOPOCO_DIR)/.docker-built: $(wildcard $(FLOPOCO_SRC)/*) $(CHISELDIR)
+	mkdir -p $(FLOPOCO_DIR)
+ifeq ($(BUILD_FP), 1)
+	make -C external/flopoco-docker build \
+	  OUTDIR=$(FLOPOCO_DIR) CONT_NAME=$(FLOPOCO_DOCKER)
+endif
+
+$(FLOPOCO_VHDL): $(FLOPOCO_DIR)/.docker-built
+# Could offload this to flopoco docker makefile...
+	docker run --name flopoco_docker $(FLOPOCO_DOCKER) \
+	  "outputFile=FPAdd.vhdl frequency=200 target=VirtexUltraScalePlus FPAdd we=8 wf=22 dualPath=true" \
+	  "outputFile=FPMult.vhdl FPMult we=8 wf=22" \
+	  "outputFile=InputIEEE.vhdl frequency=300 target=VirtexUltraScalePlus InputIEEE wEIn=8 wFIn=23 wEOut=8 wFOut=22" \
+	  "outputFile=OutputIEEE.vhdl frequency=300 target=VirtexUltraScalePlus OutputIEEE wEIn=8 wFIn=22 wEOut=8 wFOut=23"
+	for core in FPMult FPAdd InputIEEE OutputIEEE; do \
+	  docker cp flopoco_docker:/output/$${core}.vhdl $(FLOPOCO_DIR)/; \
+	done
+	docker rm flopoco_docker
+.PHONY: flopoco
+flopoco: $(FLOPOCO_VHDL)
+
 $(SYSTEMVERILOG): $(CHISELDIR) $(shell find src/main/scala -name '*.scala')
 	sbt --batch --color=always --mem $(SBT_MEM) $(SBT_RUN_CMD)
+
+ifeq ($(FLOAT), flopoco)
+.PHONY: hw
+hw: $(SYSTEMVERILOG) $(FLOPOCO_VHDL)
+else
 .PHONY: hw
 hw: $(SYSTEMVERILOG)
+endif
 
 $(OBJDIR)/%.o: $(CSRCDIR)/%.c $(SYSTEMVERILOG)
 	@mkdir -p $(OBJDIR)
@@ -147,7 +191,11 @@ $(TCL): $(CHISELDIR) $(TCL_TEMPLATE)
 .PHONY: tcl
 tcl: $(TCL)
 
+ifeq ($(FLOAT), flopoco)
+$(BITSTREAM): $(SYSTEMVERILOG) $(TCL) $(FLOPOCO_VHDL)
+else
 $(BITSTREAM): $(SYSTEMVERILOG) $(TCL)
+endif
 	rm -rf $(RPT_DIR)
 	@mkdir -p $(LOG_DIR)
 	@mkdir -p $(CHISELDIR)/run
@@ -164,6 +212,7 @@ all: $(SYSTEMVERILOG) $(OBJS) $(EXE) $(BITSTREAM)
 .PHONY: clean
 clean:
 	rm -rf $(BUILDDIR)/$(CHISEL_OUTDIR)
+	docker rm flopoco_docker || true
 
 .PHONY: distclean
 distclean: clean
