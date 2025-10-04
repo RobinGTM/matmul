@@ -49,9 +49,9 @@ class HardAcc(
 
   // Accumulator control
   when(io.i_rst) {
-    accReg                := 0.U
+    accReg := 0.U
   } .elsewhen(io.i_acc) {
-    accReg                := adder.io.out
+    accReg := adder.io.out
   }
 
   // Output
