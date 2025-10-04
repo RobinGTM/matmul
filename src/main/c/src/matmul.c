@@ -67,7 +67,8 @@ int attach_matmul(matmul_t * matmul)
   {
     matmul->m_width = matmul->s_axil_ctl[WIDTH_REG];
     matmul->m_height = matmul->s_axil_ctl[HEIGHT_REG];
-    matmul->saf = (matmul->s_axil_ctl[CTL_REG] >> SAF_BIT) % 2;
+    matmul->float_impl = (matmul->s_axil_ctl[CTL_REG] >> FLT_BIT) & FLOAT_BITMASK;
+
     if (!matmul->m_width)
     {
       dprintf(2, "[WARNING]: Could not read width from hardware, "

@@ -33,13 +33,21 @@
 
 void print_hw(matmul_t * matmul)
 {
-  if (matmul->saf)
+  printf("%dx%d_", matmul->m_height, matmul->m_width);
+  switch(matmul->float_impl)
   {
-    printf("%dx%d_saf\n", matmul->m_height, matmul->m_width);
-  }
-  else
-  {
-    printf("%dx%d_hardfloat\n", matmul->m_height, matmul->m_width);
+  case 0:
+    printf("saf\n");
+    break;
+  case 1:
+    printf("hardfloat\n");
+    break;
+  case 2:
+    printf("flopoco\n");
+    break;
+  default:
+    printf("UNKNOWN_FLOAT_IMPL\n");
+    break;
   }
 }
 
