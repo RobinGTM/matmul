@@ -28,7 +28,7 @@ import matmul.TopLevel
 object Main {
   def main(args : Array[String]) : Unit = {
     val param = new Parameters(args)
-    val hwDir = param.OUTDIR + java.io.File.separator + "hw"
+    val hwDir = param.OUTDIR + java.io.File.separator + "hw/sv"
     val swDir = param.OUTDIR + java.io.File.separator + "sw"
 
     ChiselStage.emitSystemVerilogFile(

@@ -109,8 +109,22 @@ package object utils {
     // Matrix height (number of memory values per worker)
     val M_HEIGHT = parseOpt("M_HEIGHT", "h", 16)
 
-    // Use hardfloat if true else SAF
-    val USE_HARDFLOAT = args.contains("-USE_HARDFLOAT") || args.contains("-hf")
+    // MAC DSP pipeline registers
+    val MAC_DSP_PIPELINE_REGS = parseOpt("MAC_DSP_PIPELINE_DEPTH", "mpd", 4)
+
+    // Float type
+    val FLOAT = parseOpt("FLOAT", "f", "saf")
+    require(FLOAT == "saf" || FLOAT == "hardfloat" || FLOAT == "flopoco",
+      "FLOAT must be one of:\n" +
+      "- saf -- custom SAF implementation\n" +
+      "- hardfloat -- Berkeley's hardfloat package\n" +
+      "- flopoco -- De Dinechin and Kumm's FloPoCo generator"
+    )
+    if(FLOAT == "flopoco") {
+      require(MAC_DSP_PIPELINE_REGS == 0,
+        "Used Flopoco mult core is not pipelined (yet)"
+      )
+    }
 
     // Use XPM for FIFOs
     val FIFO_TYPE = parseOpt("FIFO_TYPE", "fifo", "default")
@@ -120,10 +134,9 @@ package object utils {
     )
 
     // Output directory
-    private val hfString = if(USE_HARDFLOAT) { "hardfloat" } else { "saf" }
     private val defaultOut : String =
       s"outputs/MatMul-${M_HEIGHT}x${M_WIDTH}" +
-      s"_${hfString}-${BASE_CLK * PLL_MULT / PLL_DIV}MHz"
+      s"_${FLOAT}-${BASE_CLK * PLL_MULT / PLL_DIV}MHz"
     // Output directory
     val OUTDIR = parseOpt("OUTDIR", "o", defaultOut)
 
@@ -137,11 +150,6 @@ package object utils {
     val CTL_W    = parseOpt("CTL_W", "cw", 32)
     // SAF total width
     val SAF_WIDTH = 8 - SAF_L + SAF_W
-    // val memData = if(USE_HARDFLOAT) {
-    //   readCSVFloat(WEIGHT_FILE)
-    // } else {
-    //   readCSVSAF(WEIGHT_FILE, SAF_L, SAF_W, SAF_B, SAF_L2N)
-    // }
     // AXI buses
     val AXI_W  = parseOpt("AXI_W", "aw", 64)
     val AXI_AW = parseOpt("AXI_AW", "aaw", 64)
@@ -153,8 +161,6 @@ package object utils {
     val IFIFO_CNT_W = log2Up(IFIFO_DEPTH)
     // MatMul chain pipeline registers
     val PIPELINE_REGS = parseOpt("PIPELINE_REGS", "ppd", 2)
-    // MAC DSP pipeline registers
-    val MAC_DSP_PIPELINE_REGS = parseOpt("MAC_DSP_PIPELINE_DEPTH", "mpd", 4)
 
     // Datapaths width
     val DW = 33
@@ -163,13 +169,24 @@ package object utils {
     val CTL_PROG  = 0x0
     val CTL_WRITE = 0x1
     val CTL_READY = 0x2
-    // Set to 1 if SAF is enabled (convenience)
-    val CTL_SAF   = 0x10
+    // Float-operators flags
+    val CTL_FLOAT = 0x10
+
+    val CTL_FLT_SAF = "b00".U(2.W)
+    val CTL_FLT_HF  = "b01".U(2.W)
+    val CTL_FLT_FP  = "b10".U(2.W)
 
     // Register addresses
     val CTL_REG    = 0x0
     val HEIGHT_REG = 0x4
     val WIDTH_REG  = 0x8
+
+    val FLOAT_TYPE_MAP = Map(
+      "saf"       -> 0,
+      "hardfloat" -> 1,
+      "flopoco"   -> 2
+    )
+    val FLOAT_BITMASK = 3 // TODO!!!!!!!!!!!
   }
 
   // Small bundle to carry write control addr / data through only one

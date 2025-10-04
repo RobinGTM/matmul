@@ -64,14 +64,14 @@ class MACTestWrapper(
 
 class MACSpec extends AnyFlatSpec with Matchers {
   val DSP_PIPELINE_REGS = 3
-  val USE_HARDFLOAT = true
+  val USE_HARDFLOAT = false
   val DW = 33
   val SAF_W = 70
   val SAF_L = 5
 
   "MAC" should "work" in {
     simulate(new MACTestWrapper(
-      USE_HARDFLOAT, DW, SAF_L, SAF_W, DSP_PIPELINE_REGS
+      USE_HARDFLOAT = USE_HARDFLOAT, DW, SAF_L, SAF_W, DSP_PIPELINE_REGS
     )) { uut =>
       def print_outs(uut : MACTestWrapper) : Unit = {
         println("=========================")

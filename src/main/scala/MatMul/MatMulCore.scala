@@ -50,18 +50,7 @@ class MatMulCore(
     wk
   }
 
-  /* WIRING */
-  // DEBUG //
-  import hardfloat._
-  import saf.utils._
-  val i_data32 = if(PARAM.USE_HARDFLOAT) {
-    fNFromRecFN(8, 24, i.data)
-  } else {
-    restoreF32(i.data)
-  }
-  dontTouch(i_data32)
-  // DEBUG //
-
+  // /* WIRING */
   // Input
   workers(0).i.data  := ShiftRegister(i.data, PARAM.PIPELINE_REGS)
   workers(0).i.valid := ShiftRegister(i.valid & readyReg, PARAM.PIPELINE_REGS)

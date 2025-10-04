@@ -22,20 +22,27 @@ package mac
 import chisel3._
 import chisel3.util._
 
+import saf._
 import hardfloat._
+import flopoco._
+
 import acc._
 import acc.interfaces._
-import saf._
 import mac.interfaces._
 
 class AccWrapper(
-  USE_HARDFLOAT : Boolean = false,
-  DW            : Int = 33,
-  SAF_W         : Int = 70,
-  SAF_L         : Int = 5
+  FLOAT : String = "saf",
+  DW    : Int = 33,
+  // Pack in map?
+  SAF_W : Int = 70,
+  SAF_L : Int = 5
 ) extends Module {
+  // Probably better with just IN_W and OUT_W
   private val SAF_WIDTH = SAF_W + 8 - SAF_L
-  private val D_WIDTH = if(USE_HARDFLOAT) { DW } else { SAF_WIDTH }
+  private val D_WIDTH   = FLOAT match {
+    case "saf" => SAF_WIDTH
+    case _     => DW
+  }
 
   /* I/O */
   val io = IO(new GenericAccInterface(D_WIDTH))
@@ -44,10 +51,13 @@ class AccWrapper(
   val acc : Module {
     def io : GenericAccInterface
     def DELAY_TICKS : Int
-  } = if(USE_HARDFLOAT) {
-    Module(new HardAcc(DW, 8, 24))
-  } else {
-    Module(new SAFAcc(SAF_L, SAF_W))
+  } = FLOAT match {
+    case "saf"       =>
+      Module(new SAFAcc(SAF_L, SAF_W))
+    case "hardfloat" =>
+      Module(new HardAcc(DW, 8, 24))
+    case "flopoco"   =>
+      Module(new FlopocoAcc(DW))
   }
 
   /* WIRING */
