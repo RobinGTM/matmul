@@ -40,7 +40,7 @@ SYSTEMVERILOG  := $(HWDIR)/sv/$(TOP_NAME).sv
 # Memory (kB)
 SBT_MEM         = 65535
 # Flags passed to Main
-SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
+SBT_RUN_FLAGS   = -w $(M_WIDTH) -h $(M_HEIGHT) \
 -f $(FLOAT) \
 -mpd $(DSP_DEPTH) -ppd $(PIPELINE_DEPTH) \
 -xpll $(PLL_MULT) -dpll $(PLL_DIV) \
@@ -48,12 +48,12 @@ SBT_RUN_FLAGS = -w $(M_WIDTH) -h $(M_HEIGHT) \
 -fifo $(FIFO_TYPE) \
 -o $(CHISELDIR)
 # Additional flags for circt and firtool
-CIRCT_FLAGS    := "--split-verilog"
+CIRCT_FLAGS     = "--split-verilog"
 ifdef CIRCT_FLAGS
-SBT_RUN_FLAGS += -C \"$(CIRCT_FLAGS)\"
+SBT_RUN_FLAGS  += -C \"$(CIRCT_FLAGS)\"
 endif
 ifdef FIRTOOL_FLAGS
-SBT_RUN_FLAGS += -F \"$(FIRTOOL_FLAGS)\"
+SBT_RUN_FLAGS  += -F \"$(FIRTOOL_FLAGS)\"
 endif
 
 # Vitis kernel compilation
@@ -114,22 +114,38 @@ VIVADO_PART     = xcu200-fsgd2104-2-e
 # User-defined SLR constraints
 USER_SLR_CSTRS := 0
 
-default: host
+default: all
 
 help:
-	@echo "\`make all\` builds the chisel project, the associated \
-	host code, and the bitstream. Be careful: this can take a \
-	long time (>1h, even more if a big instance is compiled)."
-	@echo "\`make host\` or \`make\` build the chisel project and \
-	the host code only."
-	@echo "Use M_WIDHT and M_HEIGHT to define \
-	the machine's size."
-	@echo "Use AXIL_{AW,W}, AXI_{AW,W} to define data widths"
-	@echo "Use BASE_FREQ, PLL_MULT and PLL_DIV to define the core \
-	frequency (BASE_FREQ (MHz) is fixed by hardware, core will \
-	run at BASE_FREQ * PLL_MULT / PLL_DIV) MHz"
-	@echo "Set OOC to 0 (or anything other than 1) to disable \
-	out-of-context synthesis"
+	@echo "Other undocumented variables are in the Makefile, but it's advised not to use them."
+	@echo "Documented variables are shown with their current value between ()."
+	@echo
+	@echo "BUILDDIR       : Top-level build directory ($(BUILDDIR))"
+	@echo "CHISEL_OUTDIR  : Current build's subdirectory name (relative to \$$(BUILDDIR) ($(CHISEL_OUTDIR))"
+	@echo "NPROC          : Override nproc ($(NPROC))"
+	@echo "TOP_NAME       : Top-level module name (TopLevel for MatMul)"
+	@echo "M_HEIGHT       : Matrix height ($(M_HEIGHT))"
+	@echo "M_WIDTH        : Matrix width ($(M_WIDTH))"
+	@echo "FLOAT          : Float imlementation (\"flopoco\", \"saf\" or \"hardfloat\") ($(FLOAT))"
+	@echo "BASE_FREQ      : Core reference clock frequency (hardcoded by constraints) ($(BASE_FREQ))"
+	@echo "PLL_MULT       : PLL multiply factor ($(PLL_MULT))"
+	@echo "PLL_DIV        : PLL divide factor ($(PLL_DIV))"
+	@echo "DSP_DEPTH      : DSP pipelining depth (always 0 with FLOAT=\"flopoco\") ($(DSP_DEPTH))"
+	@echo "PIPELINE_DEPTH : Pipeline register count between workers ($(PIPELINE_DEPTH))"
+	@echo "FIFO_TYPE      : FIFO implementation: \"default\" or \"xpm\" ($(FIFO_TYPE))"
+	@echo "SBT_MEM        : Max memory allocated to SBT's JVM ($(SBT_MEM))"
+	@echo "CIRCT_FLAGS    : Additional flags for CIRCT ($(CIRCT_FLAGS))"
+	@echo "FIRTOOL_FLAGS  : Additional flags for Firtool ($(FIRTOOL_FLAGS))"
+	@echo "CC             : C Compiler ($(CC))"
+	@echo "CFLAGS         : Flags for GCC ($(CFLAGS))"
+	@echo "EXE_NAME       : Name for the host executable ($(EXE_NAME))"
+	@echo "BUILD_FP       : Build FloPoCo container in external/flopoco (1:yes/0:no) ($(BUILD_FP))"
+	@echo "OOC            : Use out-of-context synthesis (1:yes/0:no) ($(OOC))"
+	@echo "BITSTREAM_NAME : Name for the produced bitstream ($(BITSTREAM_NAME))"
+	@echo "VIVADO_PART    : Only supported part is xcu200-fsgd2104-2-e for now ($(VIVADO_PART))"
+	@echo "USER_SLR_CSTRS : Apply Chisel-generated SLR constraints (1:yes/0:no) ($(USER_SLR_CSTRS))"
+	@echo
+	@echo "Run outputs and reports will be produced in [$(CHISELDIR)]"
 
 $(CHISELDIR):
 	mkdir -p $(CHISELDIR)
