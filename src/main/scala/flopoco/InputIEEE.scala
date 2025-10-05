@@ -1,4 +1,4 @@
-/* HardAcc.scala -- hardfloat-based float accumulator
+/* InputIEEE.scala -- Black-box for IEEE to Flopoco format converter
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
@@ -17,43 +17,21 @@
  * You should have received a copy of the GNU General Public License
  * along with matmul. If not, see <https://www.gnu.org/licenses/>.
  */
-package acc
+package flopoco
 
+// Chisel
 import chisel3._
 import chisel3.util._
+import chisel3.experimental._
 
-import hardfloat._
-import acc.interfaces._
-
-class HardAcc(
-  DW    : Int = 33,
-  EXP_W : Int = 8,
-  SIG_W : Int = 24
-) extends Module {
-  val DELAY_TICKS = 1
-
-  /* I/O */
-  val io = IO(new GenericAccInterface(DW))
-
-  /* INTERNALS */
-  // Accumulator register
-  val accReg = RegInit(0.U(DW.W))
-
-  // hardfloat adder
-  val adder = Module(new AddRecFN(EXP_W, SIG_W))
-  adder.io.subOp          := false.B
-  adder.io.roundingMode   := 0.U
-  adder.io.detectTininess := 0.U
-  adder.io.a              := io.i_in
-  adder.io.b              := accReg
-
-  // Accumulator control
-  when(io.i_rst) {
-    accReg := 0.U
-  } .elsewhen(io.i_acc) {
-    accReg := adder.io.out
-  }
-
-  // Output
-  io.o_res := accReg
+class InputIEEE(
+  DW   : Int = 33,
+  FREQ : Int = 300
+) extends BlackBox {
+  val io = IO(new Bundle {
+    val X = Input(UInt(DW.W))
+    val R = Output(UInt(DW.W))
+  })
+  val freq_str = if(FREQ == 0) { "comb" } else { s"Freq${FREQ}" }
+  override def desiredName = s"InputIEEE_8_23_to_8_22_${freq_str}_uid2"
 }

@@ -31,8 +31,6 @@ import matmul.utils.Parameters
 class Worker(
   PARAM : Parameters
 ) extends Module {
-  // If hardfloat is used, float is 32-bit
-  // require((PARAM.USE_HARDFLOAT && DW == 32) || (!PARAM.USE_HARDFLOAT))
   /* I/O */
   private val WID_W = log2Up(PARAM.M_HEIGHT)
   // Worker ID: Passed as input to prevent Chisel from creating lots
@@ -44,7 +42,7 @@ class Worker(
 
   /* MAC MODULE */
   val mac = Module(new MAC(
-    PARAM.USE_HARDFLOAT,
+    PARAM.FLOAT,
     PARAM.DW,
     PARAM.SAF_L,
     PARAM.SAF_W,
@@ -146,7 +144,7 @@ class Worker(
   // Send result logic
   val sendAcc = Wire(Bool())
   val gotLastInputReg = RegInit(false.B)
-  // MAC pipeline ticks (should be set by MAC class)
+  // MAC pipeline ticks (should be set by MAC and memory classes)
   val DELAY_TICKS     = mac.DELAY_TICKS + wkMem.OUTPUT_ADD_TICKS
   val waitForMacReg   = RegInit(0.U((DELAY_TICKS).W))
   when(wid === 0.U) {

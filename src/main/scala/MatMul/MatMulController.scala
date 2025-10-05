@@ -31,6 +31,7 @@ import axi.interfaces._
 import saf._
 import saf.utils._
 import hardfloat.{recFNFromFN,fNFromRecFN}
+import flopoco.{InputIEEE,OutputIEEE}
 import matmul.interfaces._
 import matmul.utils._
 
@@ -86,8 +87,10 @@ class MatMulController(
     ctl_reg.o_data := 0.U
   }
 
-  // SAF flag
-  ctlReg(PARAM.CTL_SAF) := (!PARAM.USE_HARDFLOAT).B
+  // FLOAT flag
+  for(i <- 0 to PARAM.FLOAT_TYPE_MAP.toList.length - 1) {
+    ctlReg(PARAM.CTL_FLOAT + i) := PARAM.FLOAT_TYPE_MAP(PARAM.FLOAT).U(2.W)(i)
+  }
 
   /* FSM */
   s_axis.tready := from_matmul.ready
@@ -116,27 +119,25 @@ class MatMulController(
   m_axis.tvalid   := from_matmul.valid
   // TLAST is ignored by FIFO
   m_axis.tlast    := false.B
-  // When in SAF mode, MatMul controller converts outgoing SAFs to
-  // floats
-  if(PARAM.USE_HARDFLOAT) {
-    // Mysterious hardfloat "recoded" format, probably the same as
-    // mine (didn't bother checking)
-    m_axis.tdata := fNFromRecFN(8, 24, from_matmul.data)
-  } else {
-    // Compact and unsign mantissa
-    m_axis.tdata := restoreF32(from_matmul.data)
+  // Float input / output conversions
+  PARAM.FLOAT match {
+    case "saf"        =>
+      to_matmul.data  := expandF32(s_axis.tdata)
+      m_axis.tdata    := restoreF32(from_matmul.data)
+    case "hardfloat"  =>
+      to_matmul.data  := recFNFromFN(8, 24, s_axis.tdata)
+      m_axis.tdata    := fNFromRecFN(8, 24, from_matmul.data)
+    case "flopoco"    =>
+      val inIeee2Fp    = Module(new InputIEEE(PARAM.DW, 300))
+      inIeee2Fp.io.X  := s_axis.tdata
+      to_matmul.data  := inIeee2Fp.io.R
+      val outFp2Ieee   = Module(new OutputIEEE(PARAM.DW, 300))
+      outFp2Ieee.io.X := from_matmul.data
+      m_axis.tdata    := outFp2Ieee.io.R
   }
-
   // Unused
   to_matmul.ready := false.B
   to_matmul.valid := s_axis.tvalid
-  // When in SAF mode, MatMul controller converts incoming floats to
-  // SAF
-  if(PARAM.USE_HARDFLOAT) {
-    to_matmul.data := recFNFromFN(8, 24, s_axis.tdata)
-  } else {
-    // Expand and sign mantissa
-    to_matmul.data := expandF32(s_axis.tdata)
-  }
+  // Prog state feedback
   to_matmul.prog  := ctlReg(PARAM.CTL_PROG)
 }

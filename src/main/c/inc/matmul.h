@@ -38,7 +38,7 @@ typedef struct matmul_struct
   int          s_axi_c2h_fd;
   unsigned int m_width;
   unsigned int m_height;
-  char         saf;
+  char         float_impl;
 } matmul_t;
 
 // Attach XDMA driver devices to matmul struct

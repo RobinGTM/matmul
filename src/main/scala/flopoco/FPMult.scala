@@ -1,4 +1,4 @@
-/* HardAcc.scala -- hardfloat-based float accumulator
+/* FPMult.scala -- Black-box for Flopoco float multiplier
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
@@ -17,43 +17,26 @@
  * You should have received a copy of the GNU General Public License
  * along with matmul. If not, see <https://www.gnu.org/licenses/>.
  */
-package acc
+package flopoco
 
+// Chisel
 import chisel3._
 import chisel3.util._
+import chisel3.experimental._
 
-import hardfloat._
-import acc.interfaces._
-
-class HardAcc(
-  DW    : Int = 33,
-  EXP_W : Int = 8,
-  SIG_W : Int = 24
-) extends Module {
-  val DELAY_TICKS = 1
-
-  /* I/O */
-  val io = IO(new GenericAccInterface(DW))
-
-  /* INTERNALS */
-  // Accumulator register
-  val accReg = RegInit(0.U(DW.W))
-
-  // hardfloat adder
-  val adder = Module(new AddRecFN(EXP_W, SIG_W))
-  adder.io.subOp          := false.B
-  adder.io.roundingMode   := 0.U
-  adder.io.detectTininess := 0.U
-  adder.io.a              := io.i_in
-  adder.io.b              := accReg
-
-  // Accumulator control
-  when(io.i_rst) {
-    accReg := 0.U
-  } .elsewhen(io.i_acc) {
-    accReg := adder.io.out
-  }
-
-  // Output
-  io.o_res := accReg
+class FPMult(
+  WE             : Int = 8,
+  WF             : Int = 22,
+  FREQ           : Int = 0,
+  PIPELINE_DEPTH : Int = 0
+) extends BlackBox {
+  val DELAY_TICKS = PIPELINE_DEPTH // Flopoco defined
+  val io = IO(new Bundle {
+    // val clk = Input(Clock())
+    val X   = Input(UInt((WE + WF + 3).W))
+    val Y   = Input(UInt((WE + WF + 3).W))
+    val R   = Output(UInt((WE + WF + 3).W))
+  })
+  val sub = if(FREQ == 0) { "comb" } else { s"Freq${FREQ}" }
+  override def desiredName = s"FPMult_${WE}_${WF}_uid2_${sub}_uid3"
 }

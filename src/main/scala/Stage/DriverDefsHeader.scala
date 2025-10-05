@@ -38,13 +38,11 @@ class DriverDefsHeader(
     s"#define M_HEIGHT ${param.M_HEIGHT}\n",
     s"#define M_WIDTH  ${param.M_WIDTH}\n",
     "\n",
-    s"${
-      if(param.USE_HARDFLOAT) "#define HARDFLOAT\n"
-      else "#ifdef HARDFLOAT\n#undef HARDFLOAT\n#endif /* HARDFLOAT */\n"
-    }",
+    s"#define FLOAT \"${param.FLOAT_TYPE_MAP(param.FLOAT)}\"\n",
+    s"#define FLOAT_BITMASK ${param.FLOAT_BITMASK}\n",
     "\n",
     s"#define CTL_REG    ${param.CTL_REG}\n",
-    s"#define SAF_BIT    ${param.CTL_SAF}\n",
+    s"#define FLT_BIT    ${param.CTL_FLOAT}\n",
     s"#define HEIGHT_REG ${param.HEIGHT_REG / 4}\n",
     s"#define WIDTH_REG  ${param.WIDTH_REG / 4}\n",
     "\n",

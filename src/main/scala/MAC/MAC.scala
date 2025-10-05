@@ -26,7 +26,7 @@ import mac.interfaces._
 import saf._
 
 class MAC(
-  USE_HARDFLOAT     : Boolean = true,
+  FLOAT             : String = "saf",
   DW                : Int = 33,
   SAF_L             : Int = 5,
   SAF_W             : Int = 70,
@@ -36,12 +36,15 @@ class MAC(
   val io = IO(new MACInterface(DW))
 
   /* MODULES */
-  val mul = Module(new MulWrapper(USE_HARDFLOAT, DW, SAF_W, SAF_L, DSP_PIPELINE_REGS))
-  val acc = Module(new AccWrapper(USE_HARDFLOAT, DW, SAF_W, SAF_L))
+  val mul = Module(new MulWrapper(FLOAT, DW, SAF_W, SAF_L, DSP_PIPELINE_REGS))
+  val acc = Module(new AccWrapper(FLOAT, DW, SAF_W, SAF_L))
 
   /* INTERNALS */
   private val SAF_WIDTH = SAF_W + 8 - SAF_L
-  private val REG_WIDTH = if(USE_HARDFLOAT) { DW } else { SAF_WIDTH }
+  private val REG_WIDTH = FLOAT match {
+    case "saf" => SAF_WIDTH
+    case _     => DW
+  }
 
   // Additional pipeline register between mul and acc
   val macReg = RegInit(0.U(REG_WIDTH.W))
@@ -63,14 +66,15 @@ class MAC(
   acc.io.i_in  := macReg
 
   // Output
-  val DELAY_TICKS = acc.DELAY_TICKS + mul.DELAY_TICKS + (if(USE_HARDFLOAT) {
-    io.o_res := acc.io.o_res
-    0
-  } else {
-    val outConv      = withReset(io.i_rst) { Module(new SAFToExpF32(DW, SAF_L, SAF_W)) }
-    outConv.i_saf   := acc.io.o_res
-    io.o_res        := outConv.o_ef32
-    outConv.DELAY_TICKS
-  })
-
+  val DELAY_TICKS = acc.DELAY_TICKS + mul.DELAY_TICKS + (
+    FLOAT match {
+      case "saf" =>
+        val outConv      = withReset(io.i_rst) { Module(new SAFToExpF32(DW, SAF_L, SAF_W)) }
+        outConv.i_saf   := acc.io.o_res
+        io.o_res        := outConv.o_ef32
+        outConv.DELAY_TICKS
+      case _     =>
+        io.o_res := acc.io.o_res
+        0
+    })
 }

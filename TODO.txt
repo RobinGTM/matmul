@@ -13,7 +13,8 @@ x Better BRAM mapping (output pipelining)
   x Problem: writes filename at the end of generated SV
     (--split-verilog)
 
-x synth / impl all and benchmark again
+x synth / impl all
+- benchmark again
 
 - Make SLR constraints work and verify they impact timing closure
   (seen on 10x5, not on 300x300)
@@ -22,4 +23,8 @@ x synth / impl all and benchmark again
 - Chisel annotations to generate XDC constraint files?
 
 x XPM_FIFO_ASYNC integration
-- merge xpm-fifos branch
+x merge xpm-fifos branch
+
+x Fix flopoco calculations (delays??? / sim)
+
+- Make commits

@@ -1,4 +1,4 @@
-/* HardAcc.scala -- hardfloat-based float accumulator
+/* FlopocoAcc.scala -- flopoco-based float accumulator
  *
  * (C) Copyright 2025 Robin Gay <robin.gay@polymtl.ca>
  *
@@ -22,13 +22,11 @@ package acc
 import chisel3._
 import chisel3.util._
 
-import hardfloat._
+import flopoco._
 import acc.interfaces._
 
-class HardAcc(
-  DW    : Int = 33,
-  EXP_W : Int = 8,
-  SIG_W : Int = 24
+class FlopocoAcc(
+  DW : Int = 33
 ) extends Module {
   val DELAY_TICKS = 1
 
@@ -39,19 +37,20 @@ class HardAcc(
   // Accumulator register
   val accReg = RegInit(0.U(DW.W))
 
-  // hardfloat adder
-  val adder = Module(new AddRecFN(EXP_W, SIG_W))
-  adder.io.subOp          := false.B
-  adder.io.roundingMode   := 0.U
-  adder.io.detectTininess := 0.U
-  adder.io.a              := io.i_in
-  adder.io.b              := accReg
+  // Flopoco adder
+  val adder = Module(new FPAdd(8, 22, 200))
+
+  // Adder is combinational but Flopoco generates an unused clock
+  // @200MHz
+  adder.io.clk := DontCare
+  adder.io.X   := io.i_in
+  adder.io.Y   := accReg
 
   // Accumulator control
   when(io.i_rst) {
     accReg := 0.U
   } .elsewhen(io.i_acc) {
-    accReg := adder.io.out
+    accReg := adder.io.R
   }
 
   // Output

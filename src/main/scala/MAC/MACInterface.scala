@@ -24,31 +24,31 @@ import chisel3.util._
 
 package object interfaces {
   case class MACInterface(
-    DW : Int = 33
+    IN_W  : Int = 33,
+    OUT_W : Int = 33
   ) extends Bundle {
-    val i_a   = Input(UInt(DW.W))
-    val i_b   = Input(UInt(DW.W))
+    val i_a   = Input(UInt(IN_W.W))
+    val i_b   = Input(UInt(IN_W.W))
     val i_acc = Input(Bool())
     val i_rst = Input(Bool())
-    val o_res = Output(UInt(DW.W))
+    val o_res = Output(UInt(OUT_W.W))
   }
 
   case class GenericAdderInterface(
-    DW : Int = 33
+    IN_W : Int = 33,
+    OUT_W : Int = 33
   ) extends Bundle {
-    val i_a   = Input(UInt(DW.W))
-    val i_b   = Input(UInt(DW.W))
-    val o_res = Output(UInt(DW.W))
+    val i_a   = Input(UInt(IN_W.W))
+    val i_b   = Input(UInt(IN_W.W))
+    val o_res = Output(UInt(IN_W.W))
   }
 
   case class GenericMulInterface(
-    USE_HARDFLOAT : Boolean = false,
-    DW            : Int = 33,
-    SAF_WIDTH     : Int = 73
+    IN_W  : Int = 33,
+    OUT_W : Int = 73
   ) extends Bundle {
-    private val OUT_W = if(USE_HARDFLOAT) { DW } else { SAF_WIDTH }
-    val i_a   = Input(UInt(DW.W))
-    val i_b   = Input(UInt(DW.W))
+    val i_a   = Input(UInt(IN_W.W))
+    val i_b   = Input(UInt(IN_W.W))
     val o_res = Output(UInt(OUT_W.W))
   }
 }
