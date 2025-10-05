@@ -125,11 +125,6 @@ class TopLevel(
   core.ctl_wr_xdst <> axiW.ctl_wr_xsrc
   core.ctl_ar_xdst <> axiW.ctl_ar_xsrc
   core.ctl_rd_xsrc <> axiW.ctl_rd_xdst
-  // // FIFO clock-domain crossing counters
-  // core.ififo_xwcnt <> axiW.ififo_xwcnt
-  // core.ififo_xrcnt <> axiW.ififo_xrcnt
-  // core.ofifo_xrcnt <> axiW.ofifo_xrcnt
-  // core.ofifo_xwcnt <> axiW.ofifo_xwcnt
 
   // XDMA wiring
   // SYS
