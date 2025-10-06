@@ -2,12 +2,14 @@ x Wrap SAF/hard adders in single adder
 x same for muls
 x rework MAC
 x pipeline DSPs / workers / worker chain
-~ test and validate
+x test and validate
 x 312.5MHz!!!!!!!!!!!!!
   x 300x300_saf
   x 400x400_saf
 x SAF pipelining????????????
-- why no XDMA dcp in TCL script??
+x why no XDMA dcp in TCL script??
+  x refactored IP config and synthesis
+  x synthesized with TopLevel, don't want to hear about it again
 x Better BRAM mapping (output pipelining)
   x SV inline blackbox
   x Problem: writes filename at the end of generated SV
@@ -27,4 +29,7 @@ x merge xpm-fifos branch
 
 x Fix flopoco calculations (delays??? / sim)
 
-- Make commits
+x Make commits
+- Merge flopoco branch
+
+- XPM vs custom FIFO resource usage
