@@ -30,6 +30,6 @@ x merge xpm-fifos branch
 x Fix flopoco calculations (delays??? / sim)
 
 x Make commits
-- Merge flopoco branch
+x Merge flopoco branch
 
 - XPM vs custom FIFO resource usage
