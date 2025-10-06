@@ -7,6 +7,7 @@ BUILDDIR        = build
 # Number of processors
 NPROC           = $(shell nproc)
 
+# Insert newlines in Makefile strings
 define n
 
 
@@ -39,11 +40,10 @@ endif
 PIPELINE_DEPTH  = 3
 # Fixed (hardware clock)
 BASE_FREQ      := 156.25
-CORE_FREQ      := '$(BASE_FREQ) * $(PLL_MULT) / $(PLL_DIV)'
-CHISEL_OUTDIR   = matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT)-$(shell \
-                    echo $(CORE_FREQ) | bc \
-                  )MHz
+CORE_FREQ_EXPR := '$(BASE_FREQ) * $(PLL_MULT) / $(PLL_DIV)'
+CORE_FREQ      := $(shell echo $(CORE_FREQ_EXPR) | bc)
 FIFO_TYPE       = default
+CHISEL_OUTDIR   = $(M_HEIGHT)x$(M_WIDTH)_$(FLOAT)
 # Chisel output dir (passed to Chisel Main through '-o')
 CHISELDIR      := $(BUILDDIR)/$(CHISEL_OUTDIR)
 # HW dir
@@ -121,7 +121,7 @@ RPT_DIR        := $(CHISELDIR)/$(RPT)
 # Vivado logs
 LOG             = log
 LOG_DIR        := $(CHISELDIR)/$(LOG)
-BITSTREAM_NAME := $(TOP_NAME).bit
+BITSTREAM_NAME := matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT).bit
 BITSTREAM      := $(CHISELDIR)/$(BITSTREAM_NAME)
 # Defaults to Alveo U200
 VIVADO_PART     = xcu200-fsgd2104-2-e
@@ -137,7 +137,7 @@ help:
 	@echo "BUILDDIR       : Top-level build directory ($(BUILDDIR))"
 	@echo "CHISEL_OUTDIR  : Current build's subdirectory name (relative to \$$(BUILDDIR) ($(CHISEL_OUTDIR))"
 	@echo "NPROC          : Override nproc ($(NPROC))"
-	@echo "TOP_NAME       : Top-level module name (TopLevel for MatMul)"
+	@echo "TOP_NAME       : Top-level module name (TopLevel for matmul)"
 	@echo "M_HEIGHT       : Matrix height ($(M_HEIGHT))"
 	@echo "M_WIDTH        : Matrix width ($(M_WIDTH))"
 	@echo "FLOAT          : Float imlementation (\"flopoco\", \"saf\" or \"hardfloat\") ($(FLOAT))"
