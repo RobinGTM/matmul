@@ -61,8 +61,6 @@ SBT_RUN_FLAGS   = -w $(M_WIDTH) -h $(M_HEIGHT) \
 -fbase $(BASE_FREQ) \
 -fifo $(FIFO_TYPE) \
 -o $(CHISELDIR)
-# Additional flags for circt and firtool
-CIRCT_FLAGS     = "--split-verilog"
 ifdef CIRCT_FLAGS
 SBT_RUN_FLAGS  += -C \"$(CIRCT_FLAGS)\"
 endif

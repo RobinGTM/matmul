@@ -23,6 +23,7 @@ package matmul.stage
 import collection.mutable.Queue
 import scala.util.Using
 import java.io.PrintWriter
+import java.nio.file.Files
 
 import matmul.utils.Parameters
 
@@ -69,6 +70,10 @@ class SLRConstraints(param : Parameters, model : String = "u200") {
 
   def create(dir : String) : Unit = {
     val outFile = dir + s"/slr_assignments_${lowerModel}.xdc"
+
+    // Create directory if needed
+    Files.createDirectories(java.nio.file.Paths.get(dir))
+      .toAbsolutePath.toString
 
     // Minimum blocks per SLR
     val minBlkPerSlr = (nBlk / nSlr).toInt
