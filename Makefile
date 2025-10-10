@@ -133,7 +133,7 @@ help:
 	@echo "Documented variables are shown with their current value between ()."
 	@echo
 	@echo "BUILDDIR       : Top-level build directory ($(BUILDDIR))"
-	@echo "CHISEL_OUTDIR  : Current build's subdirectory name (relative to \$$(BUILDDIR) ($(CHISEL_OUTDIR))"
+	@echo "CHISEL_OUTDIR  : Current build's subdirectory name (relative to \$$(BUILDDIR)) ($(CHISEL_OUTDIR))"
 	@echo "NPROC          : Override nproc ($(NPROC))"
 	@echo "TOP_NAME       : Top-level module name (TopLevel for matmul)"
 	@echo "M_HEIGHT       : Matrix height ($(M_HEIGHT))"
