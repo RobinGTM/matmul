@@ -69,14 +69,14 @@ if { [ file exist ../hw/vhdl ] } {
 }
 # Mandatory in non-project mode
 auto_detect_xpm
-read_xdc         [glob ${MATMUL_DIR}/src/main/xdc/*.xdc]
+read_xdc ${MATMUL_DIR}/src/main/xdc/matmul.xdc
 
 # Don't OOC XDMA
 set_property generate_synth_checkpoint false [get_files ${xdma_xci}]
 
 # Generate XDMA products
-set_property used_in_synthesis false [get_files matmul.xdc]
-set_property used_in_implementation false [get_files dont_touch.xdc]
+# set_property used_in_synthesis false [get_files matmul.xdc]
+# set_property used_in_implementation false [get_files dont_touch.xdc]
 # Generate IP products
 generate_target all [get_ips xdma]
 catch { config_ip_cache -export [get_ips -all xdma] }
@@ -109,8 +109,8 @@ if { ${OOC} == 1 } {
     } {
       puts "Found existing dcp, not re-synthesizing \"${ooc_module}\""
     } else {
-      set_property used_in_synthesis false [get_files matmul.xdc]
-      set_property used_in_implementation false [get_files dont_touch.xdc]
+      # set_property used_in_synthesis false [get_files matmul.xdc]
+      # set_property used_in_implementation false [get_files dont_touch.xdc]
       synth_design -part ${PART} -top ${ooc_module} -mode out_of_context
       # opt_design
       # Vivado does this
@@ -157,7 +157,7 @@ if { [ file exist ../hw/vhdl ] } {
 }
   auto_detect_xpm
   # Re-read constraints in new project
-  read_xdc [glob ${MATMUL_DIR}/src/main/xdc/*.xdc]
+  read_xdc ${MATMUL_DIR}/src/main/xdc/matmul.xdc
   # Re-read xdma IP
   read_ip ${xdma_xci}
 
@@ -183,8 +183,8 @@ if { [ file exist ../hw/vhdl ] } {
     read_checkpoint ${linked_dcp}
     open_checkpoint ${linked_dcp}
   } else {
-    set_property used_in_synthesis false [get_files matmul.xdc]
-    set_property used_in_implementation false [get_files dont_touch.xdc]
+    # set_property used_in_synthesis false [get_files matmul.xdc]
+    # set_property used_in_implementation false [get_files dont_touch.xdc]
     # Read netlists
     read_edif [glob ${EDF_DIR}/*/*]
     # Link
@@ -192,8 +192,8 @@ if { [ file exist ../hw/vhdl ] } {
     write_checkpoint -force ${linked_dcp}
   }
 } else {
-  set_property used_in_synthesis false [get_files matmul.xdc]
-  set_property used_in_implementation false [get_files dont_touch.xdc]
+  # set_property used_in_synthesis false [get_files matmul.xdc]
+  # set_property used_in_implementation false [get_files dont_touch.xdc]
   # Synth
   synth_design -top ${top_name} -part ${PART}
   write_checkpoint -force -noxdef ${DCP_DIR}/${top_name}.dcp
@@ -209,6 +209,7 @@ if { [ file exist ../hw/vhdl ] } {
 if { ${USER_SLR_CSTRS} == 1 } {
   set SLR_XDC ../hw/xdc/*slr_assignments*.xdc
   read_xdc [glob ${SLR_XDC}]
+  # set_property used_in_implementation true [get_files [glob ${SLR_XDC}]]
 }
 
 # Opt
