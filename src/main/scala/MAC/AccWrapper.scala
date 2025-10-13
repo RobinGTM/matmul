@@ -37,6 +37,12 @@ class AccWrapper(
   SAF_W : Int = 70,
   SAF_L : Int = 5
 ) extends Module {
+  // Manually maintained...
+  val FLTS = List("saf", "hardfloat", "flopoco")
+  require(FLTS.find(FLOAT == _) != None,
+    s"[MulWrapper] Float implementation \"${FLOAT}\" not supported."
+  )
+
   // Probably better with just IN_W and OUT_W
   private val SAF_WIDTH = SAF_W + 8 - SAF_L
   private val D_WIDTH   = FLOAT match {

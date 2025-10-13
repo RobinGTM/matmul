@@ -40,7 +40,7 @@ class MulWrapper(
   // Manually maintained...
   //
   // Lower-level Mult modules should expose a `DELAY_TICKS` attribute
-  // that give the number of cycles between input and output
+  // that gives the number of cycles between input and output
   //
   val FLTS = List("saf", "hardfloat", "flopoco")
   require(FLTS.find(FLOAT == _) != None,
