@@ -116,9 +116,9 @@ package object utils {
     val FLOAT = parseOpt("FLOAT", "f", "saf")
     require(FLOAT == "saf" || FLOAT == "hardfloat" || FLOAT == "flopoco",
       "FLOAT must be one of:\n" +
-      "- saf -- custom SAF implementation\n" +
-      "- hardfloat -- Berkeley's hardfloat package\n" +
-      "- flopoco -- De Dinechin and Kumm's FloPoCo generator"
+      "- `saf`       -- custom SAF implementation\n" +
+      "- `hardfloat` -- Berkeley's hardfloat package\n" +
+      "- `flopoco`   -- De Dinechin and Kumm's FloPoCo generator"
     )
     if(FLOAT == "flopoco") {
       require(MAC_DSP_PIPELINE_REGS == 0,
