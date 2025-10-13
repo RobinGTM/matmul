@@ -117,7 +117,7 @@ DCP_DIR        := $(CHISELDIR)/$(DCP)
 RPT             = rpt
 RPT_DIR        := $(CHISELDIR)/$(RPT)
 # Vivado logs
-LOG             = log
+LOG             = run
 LOG_DIR        := $(CHISELDIR)/$(LOG)
 BITSTREAM_NAME := matmul-$(M_HEIGHT)x$(M_WIDTH)_$(FLOAT).bit
 BITSTREAM      := $(CHISELDIR)/$(BITSTREAM_NAME)
@@ -223,7 +223,7 @@ $(BITSTREAM): $(SYSTEMVERILOG) $(TCL) $(FLOPOCO_VHDL)
 else
 $(BITSTREAM): $(SYSTEMVERILOG) $(TCL)
 endif
-	rm -rf $(RPT_DIR)
+#	 rm -rf $(RPT_DIR)
 	@mkdir -p $(LOG_DIR)
 	@mkdir -p $(CHISELDIR)/run
 	cd $(CHISELDIR)/run; \
