@@ -1,5 +1,7 @@
 #######################################
 # ASYNC_REG properties for clock domain crossing
+set_property ASYNC_REG true [get_cells core/sync_rstn_reg]
+set_property ASYNC_REG true [get_cells core/sync_rstn_REG_reg]
 # (should probably automate this)
 # Control MCPs
 set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/arMcpSrc/ackSyncFF1_reg]

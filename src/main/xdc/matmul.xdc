@@ -37,6 +37,8 @@ set_clock_groups -asynchronous \
 #####################
 # Reset configuration
 set_false_path -from [get_ports sys_rst_n]
+# Core reset
+set_false_path -from [get_cells core/sync_rstn_reg]
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets sysRstIBuf/O]
 set_property PULLTYPE PULLUP [get_ports sys_rst_n]
 set_property IOSTANDARD POD12 [get_ports sys_rst_n]
