@@ -34,36 +34,6 @@ set_clock_groups -asynchronous \
     -group [get_clocks _xdma_axi_aclk] \
     -group [get_clocks coreclk]
 #
-#######################################
-# False paths for clock domain crossing
-# (should probably automate this)
-set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/arMcpSrc/ackSyncFF1_reg]
-set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/arMcpSrc/ackSyncFF2_reg]
-set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/wrMcpSrc/ackSyncFF1_reg]
-set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/wrMcpSrc/ackSyncFF2_reg]
-set_property ASYNC_REG true [get_cells axiW/iFifoWrPort/rCntMcpDst/loadSyncFF1_reg]
-set_property ASYNC_REG true [get_cells axiW/iFifoWrPort/rCntMcpDst/loadSyncFF2_reg]
-set_property ASYNC_REG true [get_cells axiW/iFifoWrPort/wCntMcpSrc/ackSyncFF1_reg]
-set_property ASYNC_REG true [get_cells axiW/iFifoWrPort/wCntMcpSrc/ackSyncFF2_reg]
-set_property ASYNC_REG true [get_cells axiW/oFifoRdPort/wCntMcpDst/loadSyncFF1_reg]
-set_property ASYNC_REG true [get_cells axiW/oFifoRdPort/wCntMcpDst/loadSyncFF2_reg]
-set_property ASYNC_REG true [get_cells axiW/oFifoRdPort/rCntMcpSrc/ackSyncFF1_reg]
-set_property ASYNC_REG true [get_cells axiW/oFifoRdPort/rCntMcpSrc/ackSyncFF2_reg]
-set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/rdMcpDst/loadSyncFF1_reg]
-set_property ASYNC_REG true [get_cells axiW/axiLiteSlave/rdMcpDst/loadSyncFF2_reg]
-set_property ASYNC_REG true [get_cells core/oFifoWrPort/rCntMcpDst/loadSyncFF1_reg]
-set_property ASYNC_REG true [get_cells core/oFifoWrPort/rCntMcpDst/loadSyncFF2_reg]
-set_property ASYNC_REG true [get_cells core/iFifoRdPort/rCntMcpSrc/ackSyncFF1_reg]
-set_property ASYNC_REG true [get_cells core/iFifoRdPort/rCntMcpSrc/ackSyncFF2_reg]
-set_property ASYNC_REG true [get_cells core/mcpAdapter/wrMcpDst/loadSyncFF1_reg]
-set_property ASYNC_REG true [get_cells core/mcpAdapter/wrMcpDst/loadSyncFF2_reg]
-set_property ASYNC_REG true [get_cells core/oFifoWrPort/wCntMcpSrc/ackSyncFF1_reg]
-set_property ASYNC_REG true [get_cells core/oFifoWrPort/wCntMcpSrc/ackSyncFF2_reg]
-set_property ASYNC_REG true [get_cells core/iFifoRdPort/wCntMcpDst/loadSyncFF1_reg]
-set_property ASYNC_REG true [get_cells core/iFifoRdPort/wCntMcpDst/loadSyncFF2_reg]
-set_property ASYNC_REG true [get_cells core/mcpAdapter/arMcpDst/loadSyncFF1_reg]
-set_property ASYNC_REG true [get_cells core/mcpAdapter/arMcpDst/loadSyncFF2_reg]
-#
 #####################
 # Reset configuration
 set_false_path -from [get_ports sys_rst_n]

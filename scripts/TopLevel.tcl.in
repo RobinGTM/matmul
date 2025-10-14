@@ -69,7 +69,7 @@ if { [ file exist ../hw/vhdl ] } {
 }
 # Mandatory in non-project mode
 auto_detect_xpm
-read_xdc         [glob ${MATMUL_DIR}/src/main/xdc/*.xdc]
+read_xdc [glob ${MATMUL_DIR}/src/main/xdc/*.xdc]
 
 # Don't OOC XDMA
 set_property generate_synth_checkpoint false [get_files ${xdma_xci}]
