@@ -40,8 +40,7 @@ class AXIWrapper(
   CTL_AW      : Int = 32,
   CTL_W       : Int = 32,
   AXI_AW      : Int = 64,
-  AXI_W       : Int = 64,
-  FIFO_TYPE   : String = "default"
+  AXI_W       : Int = 64
 ) extends RawModule {
   /* I/O */
   val axi_aclk  = IO(Input(Clock()))
