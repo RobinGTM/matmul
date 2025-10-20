@@ -109,7 +109,7 @@ OOC             = 1
 # Create compilation script
 TCL_TEMPLATE   := scripts/$(TOP_NAME).tcl.in
 # Compilation script location
-TCL            := $(shell readlink -f $(CHISELDIR))/$(notdir $(TCL_TEMPLATE:%.in=%))
+TCL            := $(CHISELDIR)/$(notdir $(TCL_TEMPLATE:%.in=%))
 # Vivado checkpoints
 DCP             = dcp
 DCP_DIR        := $(CHISELDIR)/$(DCP)

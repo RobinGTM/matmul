@@ -35,8 +35,6 @@ import axi.interfaces._
 import matmul.utils._
 
 class AXIWrapper(
-  IFIFO_CNT_W : Int,
-  OFIFO_CNT_W : Int,
   CTL_AW      : Int = 32,
   CTL_W       : Int = 32,
   AXI_AW      : Int = 64,

@@ -105,8 +105,6 @@ class TopLevel(
 
   // AXI wrapper
   val axiW = Module(new AXIWrapper(
-    PARAM.IFIFO_CNT_W,
-    PARAM.OFIFO_CNT_W,
     PARAM.CTL_AW,
     PARAM.CTL_W,
     PARAM.AXI_AW,
