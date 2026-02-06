@@ -33,8 +33,10 @@ class MultiCyclePathDst[T <: Data](dType : T = UInt(32.W)) extends Module {
 
   // FF1's hold / setup will be broken but that's ok, that's why FF2
   // is here
-  val loadSyncFF1    = RegNext(io_cross.load)
-  val loadSyncFF2    = RegNext(loadSyncFF1)
+  val loadSyncFF1    = RegInit(false.B)
+  val loadSyncFF2    = RegInit(false.B)
+  loadSyncFF1       := io_cross.load
+  loadSyncFF2       := loadSyncFF1
   val loadPulseReg   = RegInit(false.B)
   loadPulseReg      := loadSyncFF2
   // Send load toggle state back to domain A to generate ack

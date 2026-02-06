@@ -52,8 +52,10 @@ class MultiCyclePathSrc[T <: Data](dType : T = UInt(32.W)) extends Module {
   // Ack circuitry: receives domain B feedback and generates a pulse
   // Synchronizing flip-flops to prevent metastability
   // FF1 will have its hold / setup constraints broken
-  val ackSyncFF1  = RegNext(io_cross.ack)
-  val ackSyncFF2  = RegNext(ackSyncFF1)
+  val ackSyncFF1  = RegInit(false.B)
+  val ackSyncFF2  = RegInit(false.B)
+  ackSyncFF1     := io_cross.ack
+  ackSyncFF2     := ackSyncFF1
   val ackPulseReg = RegInit(false.B)
   // Generate ack pulse
   ackPulseReg    := ackSyncFF2
