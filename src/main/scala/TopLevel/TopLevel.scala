@@ -202,17 +202,17 @@ class TopLevel(
       val oFifoMem = SyncReadMem(PARAM.OFIFO_DEPTH, UInt(32.W))
 
       // Input FIFO ports
-      val iFifoWrPort = withClockAndReset(axi_aclk, ~axi_aresetn) {
+      val iFifoWrPort = withClockAndReset(axi_aclk, (~axi_aresetn).asAsyncReset) {
         Module(new AsyncFIFOWritePort(PARAM.IFIFO_CNT_W, UInt(32.W)))
       }
-      val iFifoRdPort = withClockAndReset(coreclk_bufed, ~sys_rst_n_c) {
+      val iFifoRdPort = withClockAndReset(coreclk_bufed, (~sys_rst_n_c).asAsyncReset) {
         Module(new AsyncFIFOReadPort(PARAM.IFIFO_CNT_W, UInt(32.W)))
       }
       // Output FIFO ports
-      val oFifoWrPort = withClockAndReset(coreclk_bufed, ~sys_rst_n_c) {
+      val oFifoWrPort = withClockAndReset(coreclk_bufed, (~sys_rst_n_c).asAsyncReset) {
         Module(new AsyncFIFOWritePort(PARAM.OFIFO_CNT_W, UInt(32.W)))
       }
-      val oFifoRdPort = withClockAndReset(axi_aclk, ~axi_aresetn) {
+      val oFifoRdPort = withClockAndReset(axi_aclk, (~axi_aresetn).asAsyncReset) {
         Module(new AsyncFIFOReadPort(PARAM.OFIFO_CNT_W, UInt(32.W)))
       }
 

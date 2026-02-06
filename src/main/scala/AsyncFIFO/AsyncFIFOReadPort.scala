@@ -30,7 +30,7 @@ import asyncfifo.interfaces._
 class AsyncFIFOReadPort[T <: Data](
   CNT_W : Int,
   dType : T = UInt(32.W)
-) extends Module {
+) extends Module with RequireAsyncReset {
   /* I/O */
   // External FIFO read interface
   val fifo_rd    = IO(new AsyncFIFOReadInterface(dType))
